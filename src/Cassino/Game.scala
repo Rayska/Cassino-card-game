@@ -5,7 +5,7 @@ import scala.swing.*
 
 class Game(val players: Vector[Player]){
 
-  val scores:       Buffer[(Player, Int)] = players.zip(Vector.tabulate(players.size)(k => 0)).toBuffer
+  val scores:       Buffer[(Player, Int)] = players.zip(Vector.fill(players.size)(0)).toBuffer
   val endCondition: Boolean = false
 
   def playRound: Unit =
