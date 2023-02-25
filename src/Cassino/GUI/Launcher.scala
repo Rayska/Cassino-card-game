@@ -2,9 +2,9 @@ package Cassino.GUI
 
 import scala.swing.*
 
-object Animate extends SimpleSwingApplication:
+object Launcher extends SimpleSwingApplication:
 
   val top: MainFrame = GUI
   
-end Animate
+end Launcher
 
