@@ -1,0 +1,3 @@
+I have so far created mainly small functions in the project. Playing a turn is still a work in progress. I had some trouble setting up GitLab and version control in IntelliJ but everything seems to be working now. I have tinkered around a little bit with scala.swing but I might still change to scalaFX for the GUI. This however is not a priority at this point yet, but I wanted to have a better understanding of GUIs. So far I have maybe spent 10 hours on the project, mainly on technical difficulties. So a little behind in schedule.
+
+Some implemented functions include Game.addScore and .playRound, Round.dealCards, Deck.draw, and Player.addCardToPlayer. Also Card now includes it's own suit, handValue and tableValue.
