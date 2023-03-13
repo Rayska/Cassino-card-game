@@ -7,6 +7,10 @@ class Deck {
 
  val deck: Buffer[Card] = Random.shuffle(Buffer.tabulate(52)(k => new Card(k))) //Shuffled Buffer with one of each card
 
- def draw: Card = deck.remove(0) // removes and returns the first element of the Buffer simultaniously
+ def draw: Option[Card] = 
+  if deck.nonEmpty then
+   Some(deck.remove(0)) // removes and returns the first element of the Buffer simultaniously
+  else
+   None
 
 }
