@@ -20,10 +20,6 @@ class Human(val playerNumber: Int, val playerName: String) extends Player {
 
   def addCardToPlayer(card: Card) = cards += card
 
-  def addExtraScore(possiblyMostCards: Boolean, possiblyMostSpades: Boolean) =
-    if possiblyMostCards  then playerScore += 1
-    if possiblyMostSpades then playerScore += 2
-
   def addPoints(add: Int): Unit =
     playerScore += add
 

@@ -21,7 +21,7 @@ class COM(val playerNumber: Int, val playerName: String) extends Player {
   def addCardToPlayer(card: Card) = cards += card
 
   def addPoints(add: Int): Unit =
-    playerScore += 1
+    playerScore += add
 
   def returnPileSize: Int = pile.size
 
