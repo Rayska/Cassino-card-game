@@ -8,7 +8,6 @@ class Round(val players: Vector[Player], val dealer: Int) {
 
   val deck:         Deck                  = new Deck
   val tableCards:   Buffer[Card]          = Buffer()
-  val sweeps:       Buffer[(Player, Int)] = players.zip(Vector.tabulate(players.size)(k => 0)).toBuffer //Could be implemented into Player via methods in playTurn
   var endCondition: Boolean               = false
 
   def playRound: Unit =
@@ -16,7 +15,11 @@ class Round(val players: Vector[Player], val dealer: Int) {
     while !endCondition do
       this.playTurn
       endCondition = players.forall(_.cards.isEmpty)
-    players.foreach(k => k.addExtraScore(sweeps.find(l => l._1.playerNumber == k.playerNumber).get._2, true, true)) //not working yet
+    // NOTE: Not sure if in case of ties, extra points should be awarded to multiple players? Currently they are
+    val mostCards  = players.filter(k => k.returnPileSize == players.maxBy(l => l.returnPileSize).returnPileSize)       // Players with largest piles
+    val mostSpades = players.filter(k => k.returnSpadesSize == players.maxBy(l => l.returnSpadesSize).returnSpadesSize) // Players with most Spades
+    mostCards.foreach(_.addPoints(1))                                                                                   // Add points for most cards
+    mostSpades.foreach(_.addPoints(2))                                                                                  // Add points for most Spades
 
   def playTurn: (Buffer[(Card, Buffer[Card])], Buffer[Card]) =
     turn += 1

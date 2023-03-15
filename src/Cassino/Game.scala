@@ -12,15 +12,14 @@ class Game(val players: Vector[Player]){
   def playGame: Unit =
     while !endCondition do
       new Round(players, roundsPlayed).playRound
-
-      for score <- scores do
-        scores.update(scores.indexOf(score), (score._1, score._2 + score._1.returnRoundScore))
+      this.updateScores
       roundsPlayed += 1
-      endCondition = scores.forall(_._2 < 16)
+      endCondition = !scores.forall(_._2 < 16)
+    println(s"Game has ended with ${scores.maxBy(_._2)._1} as the Winner!")
 
-
-  def addScore(score: Int, player: Player): Unit =
-    scores(player.playerNumber) = (player, score)
+  def updateScores: Unit =
+    for score <- scores do
+      scores.update(scores.indexOf(score), (score._1, score._2 + score._1.returnRoundScore))
 
   def returnTopScore: (Player, Int) = scores.maxBy(_._2)
 

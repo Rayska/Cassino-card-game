@@ -13,5 +13,9 @@ trait Player {
 
   def addCardToPlayer(card: Card): Unit
 
-  def addExtraScore(possibleSweeps: Int, possiblyMostCards: Boolean, possiblyMostSpades: Boolean): Unit
+  def addPoints(add: Int): Unit
+
+  def returnPileSize: Int
+
+  def returnSpadesSize: Int
 }

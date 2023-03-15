@@ -20,8 +20,13 @@ class COM(val playerNumber: Int, val playerName: String) extends Player {
 
   def addCardToPlayer(card: Card) = cards += card
 
-  def addExtraScore(possibleSweeps: Int, possiblyMostCards: Boolean, possiblyMostSpades: Boolean) =
-    playerScore += possibleSweeps
-    if possiblyMostCards  then playerScore += 1
-    if possiblyMostSpades then playerScore += 2
+  def addPoints(add: Int): Unit =
+    playerScore += 1
+
+  def returnPileSize: Int = pile.size
+
+  def returnSpadesSize: Int = pile.count(_.suit == 3)
+
+  override def toString: String =
+    playerName + ", Player Number: " + playerNumber
 }
