@@ -1,3 +1,20 @@
+06.03.2023
+
 I have so far created mainly small functions in the project. Playing a turn is still a work in progress. I had some trouble setting up GitLab and version control in IntelliJ but everything seems to be working now. I have tinkered around a little bit with scala.swing but I might still change to scalaFX for the GUI. This however is not a priority at this point yet, but I wanted to have a better understanding of GUIs. So far I have maybe spent 10 hours on the project, mainly on technical difficulties. So a little behind in schedule.
 
 Some implemented functions include Game.addScore and .playRound, Round.dealCards, Deck.draw, and Player.addCardToPlayer. Also Card now includes it's own suit, handValue and tableValue.
+
+------------------------------------------------------------------------------
+20.03.2023
+
+- I have realized Game and Round should probably be merged into one class, so that will likely be done soon.
+- Smaller classes like Card, Deck and Player/Human/COM are mostly done, simple methods and small changes will likely still occurr but core functionality is done.
+
+Checking legitimacy/validity of moves has been implemented by checking numerous conditions in Round.checkMoveLegitimacy, which while writing this text I realize has not been pushed yet. Also method Round.checkPlayerHasCard has been implemented due to Players being able to place cards, in which case this method can be called instead of the larger Round.checkMoveLegitimacy which is used to check "taking" moves.
+
+At one point I thought I might need to handle some of the bonus points in Round. Currently checks for bonus point validity is done in Round.playRound with values mostCards and mostSpades. Additionally sweeps will be checked for in Round.playTurn. These bonus points are then added to each players' roundscores through player.addPoints without the information what the points are from. As oof now all of these will likely be trasferred into Game.scala and Round.scala will be scrapped.
+NOTE: UNCLEAR WHETHER ALL PLAYERS WITH MOST CARDS AND SPADES SHOULD GET THE BONUS POINTS, OR SHOULD ONLY 0 - 1 PLAYERS PER CATEGORY GET THE POINTS?
+
+Next I will sort out the Game/Round merging and look into having the game running in console. Although I'm behind in schedule, I feel pretty confident since I have done a lot of the smaller tasks already.
+
+------------------------------------------------------------------------------
