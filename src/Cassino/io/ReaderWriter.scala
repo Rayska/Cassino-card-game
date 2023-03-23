@@ -11,8 +11,9 @@ val ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 object ReaderWriter {
 
-  var game = new Game(Vector[Player](new Human(-1, "Invalid Player")))
+  var game = new Game(Buffer[Player](new Human(-1, "Place Holder"))) //Place holder so that each method can access it without having it as a parameter
 
+  //HERE STARTS SAVEFILE WRITING AND CREATION
   def writeSaveFile(gameActual: Game) =
     game = gameActual
     val w = new PrintWriter(new File("Demo.txt"))
@@ -38,7 +39,7 @@ object ReaderWriter {
         score.toString
       else
         ALPHABET(score.toString.last.toInt - 48).toString
-    val PLR = Buffer[String]("PLR", /*"",*/ player.playerNumber.toString, scoreFormatted, name.length.toString, name)
+    val PLR = Buffer[String]("PLR", /*"",*/ player.playerNumber.toString, scoreFormatted, name)
     player.cards.foreach(PLR += cardFormattingCreate(_))
     PLR += ","
     player.pile.foreach(PLR += cardFormattingCreate(_))
@@ -70,28 +71,39 @@ object ReaderWriter {
       case _  => ret += (card.tableValue).toString  //in order to squeeze all the cards into a sigle digit/character, all numbered cards (2 - 10) will be saved as 1 - 9
     ret
 
+  //HERE STARTS LOADING A SAVEFILE AND CREATING A GAME FROM IT
   def loadSaveFile(fileName: String): Game =
     val source = Source.fromFile(fileName)
     var dataString = source.mkString("")
     source.close()
     val blocks = dataString.split('\n').tail
     var GMEinfo = (0, 0, Buffer[Card]())
-    val players = Buffer[Player]()
+    val playersAndScores = Buffer[(Player, Int)]()
     var deck = new Deck
+    var endOfFile = false
     if !dataString.contains("CASS") then throw CorruptedCassinoFileException(s"Unknown file type, does not contain header ${"CASS"}")
     else
       dataString = dataString.dropWhile(_ !='\n')
-      for block <- blocks do
-        block.take(3).mkString("") match
-          case "GME" => GMEinfo = readGMEBlock(block)
-          case "PLR" => players += readPLRBlock(block)
-          case "DCK" => deck = readDCKBlock(block)
-          case "END" =>
-          case  _    =>
-    val newGame = new Game(players.toVector, deck)
+      for block <- blocks if !endOfFile do
+          block.take(3).mkString("") match
+            case "GME" => GMEinfo = readGMEBlock(block)
+            case "PLR" => playersAndScores += readPLRBlock(block)
+            case "DCK" => deck = readDCKBlock(block)
+            case "END" => endOfFile = true
+            case  _    =>
+    val newGame = new Game(playersAndScores.map(_._1) , deck)
+    val computers = playersAndScores.filter(k => k._1 match
+                                                    case COM(number: Int, name: String, oldGame: Game) => true
+                                                    case _ => false
+    )
+    computers.foreach(_._1.changeGame(newGame))
     newGame.setDealer(GMEinfo._1)                                       //Set the dealer
     newGame.setTurn(GMEinfo._2)                                         //Set the turn
     GMEinfo._3.foreach(newGame.addCardToTable(_))                       //Add TableCards
+    try
+      playersAndScores.foreach(k => newGame.addPlayerScores(k._1, k._2))
+    catch
+      case e:IndexOutOfBoundsException => throw CorruptedCassinoFileException("Player index out of bounds")
     newGame
 
   def readGMEBlock(block: String): (Int, Int, Buffer[Card]) =
@@ -101,9 +113,11 @@ object ReaderWriter {
     val cards = Buffer[Card]()
     val cardsAsString = Buffer[String]()
     block.drop(7).sliding(2,2).foreach(cardsAsString += _.mkString(""))
+    for cardString <- cardsAsString do
+      cards += cardFormattingRead(cardString)
     (dealer, turn, cards)
 
-  def readPLRBlock(block: String): Player =
+  def readPLRBlock(block: String): (Player, Int) =
     //val blocksize = block.slice(3,5)
     val playerNumber = block(3).toInt - 48 //Char to Int conversion is not '1' to 1
     val playerScore =
@@ -125,13 +139,11 @@ object ReaderWriter {
     var player: Player = new Human(0, "lmao")
     if block.last == 'U' then
       player = new Human(playerNumber, playerName)
-    else
-      player = new COM(playerNumber, playerName, game)
+    else if block.last == 'C' then
+      player = new COM(playerNumber, playerName)
     playerCards.foreach(player.addCardToPlayer(_))
     playerPile.foreach(player.addCardToPile(_))
-    //pile needs to be added to file format and relevant methods
-    player.addPoints(playerScore)
-    player
+    (player, playerScore)
 
   def readDCKBlock(block: String): Deck =
     val cards = Buffer[Card]()

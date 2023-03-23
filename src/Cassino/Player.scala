@@ -22,4 +22,8 @@ abstract class Player {
   def returnPileSize: Int
 
   def returnSpadesSize: Int
+
+  def changeGame(game: Game): Unit
+
+  def returnGame: Game
 }

@@ -5,7 +5,7 @@ import Cassino.io.ReaderWriter
 import scala.collection.mutable.Buffer
 import scala.swing.*
 
-class Game(val players: Vector[Player], val deck: Deck = new Deck){
+class Game(var players: Buffer[Player], val deck: Deck = new Deck){
 
   val vNumber:      String                = "0001"
   val scores:       Buffer[(Player, Int)] = players.zip(Vector.fill(players.size)(0)).toBuffer
@@ -100,5 +100,9 @@ class Game(val players: Vector[Player], val deck: Deck = new Deck){
   def setDealer(newDealer: Int): Unit = this.dealer = newDealer
 
   def setTurn(newTurn: Int): Unit  = this.turn = newTurn % players.size
+
+  def addPlayerScores(player: Player, score: Int): Unit = scores.update(scores.indexOf(scores.find(_._1 == player).get), (player, score))
+
+  def addPlayer(player: Player): Unit = players += player
 
 }
