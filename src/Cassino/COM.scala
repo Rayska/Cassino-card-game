@@ -2,7 +2,7 @@ package Cassino
 
 import scala.collection.mutable.Buffer
 
-class COM(val playerNumber: Int, val playerName: String) extends Player {
+case class COM(val playerNumber: Int, val playerName: String, game: Game) extends Player {
 
   private var playerScore: Int          = 0
 
@@ -16,6 +16,8 @@ class COM(val playerNumber: Int, val playerName: String) extends Player {
     cards.foreach(k => if k.handValue == 14 || k.cardID == 39 then roundScore += 1 else if k.cardID == 21 then roundScore += 2) //For aces and 2 of Spades you get 1 point, for 10 of Diamonds you get 2 points
     roundScore
 
+  def clearHand: Unit = cards.empty //Clears player's hand for a new round formerly .drop(cards.size)
+  
   def addCardToPile(card: Card)   = pile += card
 
   def addCardToPlayer(card: Card) = cards += card
