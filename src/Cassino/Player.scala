@@ -2,12 +2,16 @@ package Cassino
 
 import scala.collection.mutable.Buffer
 
-trait Player {
+abstract class Player {
 
   val cards:        Buffer[Card]
+  val pile:         Buffer[Card]
   val playerNumber: Int
+  val playerName:   String
 
   def returnRoundScore: Int
+  
+  def clearHand: Unit
 
   def addCardToPile(card: Card):   Unit
 

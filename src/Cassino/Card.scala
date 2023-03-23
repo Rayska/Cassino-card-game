@@ -6,9 +6,9 @@ class Card(val cardID: Int) {
   val handValue: Int = {
     if (cardID + 1) % 13 == 0 then  // Aces
       14
-    else if cardID == 21 then       // Diamonds 10
+    else if cardID == 21 then       // 10 of Diamonds
       16
-    else if cardID == 39 then       // Spades 3
+    else if cardID == 39 then       // 3 of Spades
       15
     else
       cardID % 13 + 2
