@@ -2,8 +2,9 @@ package Cassino
 import scala.collection.mutable.Buffer
 
 class Card(val cardID: Int) {
+
   val suit: Int = cardID / 13       // 0 for Clubs, 1 for Diamonds, 2 for Hearts and 3 for Spades
-  val handValue: Int = {
+  val handValue: Int =
     if (cardID + 1) % 13 == 0 then  // Aces
       14
     else if cardID == 21 then       // 10 of Diamonds
@@ -12,13 +13,12 @@ class Card(val cardID: Int) {
       15
     else
       cardID % 13 + 2
-  }
-  val tableValue: Int = {
+
+  val tableValue: Int =
     if (cardID + 1) % 13 == 0 then  // Aces
       1
     else
       cardID % 13 + 2
-  }
 
   override def toString: String =
     var ret = Buffer[String]()
@@ -33,6 +33,6 @@ class Card(val cardID: Int) {
       case 1  =>  ret += "Diamonds"
       case 2  =>  ret += "Hearts"
       case 3  =>  ret += "Spades"
-      case _  =>  ret += "Unknow suit"
+      case _  =>  ret += "Unknown suit"
     ret.mkString(" ")
 }

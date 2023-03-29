@@ -2,36 +2,45 @@ package Cassino.io
 
 import Cassino.*
 import java.io.*
-import scala.io.Source
 import java.time.*
+import java.util.NoSuchElementException
+import scala.io.Source
 import scala.collection.mutable.Buffer
 
 
 val ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+//import scala.util.matching.Regex val ALPHABET = "[A-Z]".r in Regex
 
 object ReaderWriter {
 
-  var game = new Game(Buffer[Player](new Human(-1, "Place Holder"))) //Place holder so that each method can access it without having it as a parameter
+  var gameOption: Option[Game] = None
 
   //HERE STARTS SAVEFILE WRITING AND CREATION
   def writeSaveFile(gameActual: Game) =
-    game = gameActual
-    val w = new PrintWriter(new File("Demo.txt"))
-    w.write(s"CASS${game.vNumber}${java.time.LocalDate.now.toString.split('-').reverse.mkString("")}\n")  //Version Number and date
-    w.write(createGMEBlock)                                                                           //GME block
-    for player <- game.players do
-      w.write(createPlRBlock(player))
-    w.write(createDCKBlock)
-    w.write("END00")
-    w.close()
+    try
+      gameOption = Some(gameActual)
+      val game = gameOption.get
+      val w = new PrintWriter(new File("Demo.txt"))
+      w.write(s"CASS${game.vNumber}${java.time.LocalDate.now.toString.split('-').reverse.mkString("")}\n")  //Version Number and date
+      w.write(createGMEBlock)                                                                               //GME block
+      for player <- game.players do
+        w.write(createPlRBlock(player))
+      w.write(createDCKBlock)
+      w.write("END00")
+      w.close()
+    catch
+      case e:NoSuchElementException => throw NoSuchElementException(s"${e} is None so .get causes an error")//Should be unreachable but you never know
 
-  def createGMEBlock: String =
+
+  private def createGMEBlock: String =
+    val game = gameOption.get
     val GME = Buffer[String]("GME", /*"",*/ s"D${game.dealer}" ,s"T${game.turn}")   //Create GME block
     game.tableCards.foreach(GME += cardFormattingCreate(_))                                                 //Table Cards
     //GME.update(1, GME.tail.mkString("").length.toString)
     GME.mkString("") + "\n"
 
-  def createPlRBlock(player: Player): String =
+  private def createPlRBlock(player: Player): String =
+    val game = gameOption.get
     val score = game.returnScore(player)
     val name = player.playerName + "."
     val scoreFormatted: String =
@@ -49,12 +58,13 @@ object ReaderWriter {
     //PLR.update(1, PLR.tail.mkString("").length.toString)
     PLR.mkString("") + "\n"
 
-  def createDCKBlock: String =
+  private def createDCKBlock: String =
+    val game = gameOption.get
     val DCK = Buffer[String]("DCK"/*, (game.deck.deck.size * 2).toString*/)
     game.deck.deck.foreach(DCK += cardFormattingCreate(_))
     DCK.mkString("") + "\n"
 
-  def cardFormattingCreate(card: Card): String =
+  private def cardFormattingCreate(card: Card): String =
     var ret = ""
     card.suit match
       case 0  => ret += "C"
@@ -92,9 +102,10 @@ object ReaderWriter {
             case "END" => endOfFile = true
             case  _    =>
     val newGame = new Game(playersAndScores.map(_._1) , deck)
-    val computers = playersAndScores.filter(k => k._1 match
-                                                    case COM(number: Int, name: String, oldGame: Game) => true
-                                                    case _ => false
+    val computers = playersAndScores.filter(k =>
+      k._1 match
+            case COM(number: Int, name: String, oldGame: Game) => true
+            case _ => false
     )
     computers.foreach(_._1.changeGame(newGame))
     newGame.setDealer(GMEinfo._1)                                       //Set the dealer
@@ -106,7 +117,7 @@ object ReaderWriter {
       case e:IndexOutOfBoundsException => throw CorruptedCassinoFileException("Player index out of bounds")
     newGame
 
-  def readGMEBlock(block: String): (Int, Int, Buffer[Card]) =
+  private def readGMEBlock(block: String): (Int, Int, Buffer[Card]) =
     //val blocksize = block.slice(3,5)
     val dealer = block(4).toInt - 48
     val turn = block(6).toInt - 48
@@ -117,7 +128,7 @@ object ReaderWriter {
       cards += cardFormattingRead(cardString)
     (dealer, turn, cards)
 
-  def readPLRBlock(block: String): (Player, Int) =
+  private def readPLRBlock(block: String): (Player, Int) =
     //val blocksize = block.slice(3,5)
     val playerNumber = block(3).toInt - 48 //Char to Int conversion is not '1' to 1
     val playerScore =
@@ -131,9 +142,9 @@ object ReaderWriter {
     val playerPile = Buffer[Card]()
     val pileAsString= Buffer[String]()
     block.dropWhile(_ != '.').tail.dropRight(1).takeWhile(_ != ',').sliding(2,2).foreach(cardsAsString += _.mkString("")) //player's cards
+    block.dropWhile(_ != ',').tail.dropRight(1).sliding(2,2).foreach(pileAsString += _.mkString(""))                      //player's pile
     for cardString <- cardsAsString do
       playerCards += cardFormattingRead(cardString)
-    block.dropWhile(_ != ',').tail.dropRight(1).sliding(2,2).foreach(pileAsString += _.mkString(""))                      //player's pile
     for pileString <- pileAsString do
       playerPile += cardFormattingRead(pileString)
     var player: Player = new Human(0, "lmao")
@@ -145,14 +156,14 @@ object ReaderWriter {
     playerPile.foreach(player.addCardToPile(_))
     (player, playerScore)
 
-  def readDCKBlock(block: String): Deck =
+  private def readDCKBlock(block: String): Deck =
     val cards = Buffer[Card]()
     val cardsAsString = Buffer[String]()
     block.drop(3).sliding(2,2).foreach(cardsAsString += _.mkString(""))
     cardsAsString.foreach(cards += cardFormattingRead(_))
     new Deck(cards)
 
-  def cardFormattingRead(cardString: String): Card =
+  private def cardFormattingRead(cardString: String): Card =
     if cardString.length == 2 then
       def valueFinder(char: Char): Int =
         if ALPHABET.contains(char) then

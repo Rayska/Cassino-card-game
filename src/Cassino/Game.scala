@@ -5,26 +5,28 @@ import Cassino.io.ReaderWriter
 import scala.collection.mutable.Buffer
 import scala.swing.*
 
-class Game(var players: Buffer[Player], val deck: Deck = new Deck){
+
+class Game(var players: Buffer[Player], var deck: Deck = new Deck){
 
   val vNumber:      String                = "0001"
-  val scores:       Buffer[(Player, Int)] = players.zip(Vector.fill(players.size)(0)).toBuffer
+  val scores:       Buffer[(Player, Int)] = players.zip(Buffer.fill(players.size)(0))
   val tableCards:   Buffer[Card]          = Buffer()
   var dealer:       Int                   = 0
   var turn:         Int                   = (dealer + 1) % players.size // Round starts from the player next to the dealer
-  var endCondition: Boolean               = false
+  var gameOver: Boolean               = false
 
   def playGame: Unit =
-    while !endCondition do
-      this.playRound
+    while !gameOver do
+      //this.playRound
       this.updateScores
       dealer += 1
       turn = (dealer + 1) % players.size
-      endCondition = !scores.forall(_._2 < 16)
+      gameOver = !scores.forall(_._2 < 16)
       //endCondition = true//TEMP
     println(s"Game has ended with ${scores.maxBy(_._2)._1} as the Winner!")
 
-  def playRound: Unit =
+
+  /*def playRound: Unit =
     var endConditionRound = false
     players.foreach(_.clearHand)                                                                                        // Make sure no players have cards before they have been dealt
     this.dealCards
@@ -37,9 +39,24 @@ class Game(var players: Buffer[Player], val deck: Deck = new Deck){
     val mostSpades = players.filter(k => k.returnSpadesSize == players.maxBy(l => l.returnSpadesSize).returnSpadesSize) // Players with most Spades
     mostCards.foreach(_.addPoints(1))                                                                                   // Add points for most cards
     mostSpades.foreach(_.addPoints(2))                                                                                  // Add points for most Spades
+  */
 
-  def playTurn: (Buffer[(Card, Buffer[Card])], Buffer[Card]) =
-    val whosTurn = players(turn % players.size)                                                                         // Which player's turn it is (indexes so starts from 0)
+  def setupRound(): Unit =
+    this.deck = new Deck()
+    players.foreach(_.clearHand)
+    this.dealCards
+
+  def endRound(): Unit =
+    val mostCards  = players.filter(k => k.returnPileSize == players.maxBy(l => l.returnPileSize).returnPileSize)       // Players with largest piles
+    val mostSpades = players.filter(k => k.returnSpadesSize == players.maxBy(l => l.returnSpadesSize).returnSpadesSize) // Players with most Spades
+    mostCards.foreach(_.addPoints(1))                                                                                   // Add points for most cards
+    mostSpades.foreach(_.addPoints(2))                                                                                  // Add points for most Spades
+    this.deck.clear()
+    this.updateScores                                                                                                   // Should also clear each players' roundScore since this leads to calling player.returnRoundScore
+    gameOver = scores.exists(_._2 >= 16)
+
+  def playTurn: (Buffer[(Card, Buffer[Card])], Buffer[Card]) = //Separate into two or more methods where one part is dedicated to handling input (moves)
+    var whosTurn = players(turn % players.size)                                                                         // Which player's turn it is (indexes so starts from 0)
     val take = Buffer[(Card, Buffer[Card])]((new Card(52), Buffer(new Card(52))))                                       // Temporary until implementation for input exists
     val place = Buffer[Card](new Card(52))                                                                              // Temporary until implementation for input exists
     var moveIsValid: Boolean = false
@@ -85,9 +102,9 @@ class Game(var players: Buffer[Player], val deck: Deck = new Deck){
     for card <- Buffer.tabulate(4)(k => deck.draw.getOrElse(new Card(52))) do //to the table
       tableCards += card
 
-  def updateScores: Unit =
-    for score <- scores do
-      scores.update(scores.indexOf(score), (score._1, score._2 + score._1.returnRoundScore))
+  def updateScores: Unit =    // For updating scores after each round
+    //for score <- scores do
+     scores.foreach(k => scores.update(scores.indexOf(k), (k._1, k._2 + k._1.returnRoundScore)))
 
   def returnTopScore: (Player, Int) = scores.maxBy(_._2)
 
@@ -101,7 +118,7 @@ class Game(var players: Buffer[Player], val deck: Deck = new Deck){
 
   def setTurn(newTurn: Int): Unit  = this.turn = newTurn % players.size
 
-  def addPlayerScores(player: Player, score: Int): Unit = scores.update(scores.indexOf(scores.find(_._1 == player).get), (player, score))
+  def addPlayerScores(player: Player, score: Int): Unit = scores.update(scores.indexOf(scores.find(_._1 == player).get), (player, score)) // Set correct scores for players when loading from a file
 
   def addPlayer(player: Player): Unit = players += player
 
