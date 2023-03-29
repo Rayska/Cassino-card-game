@@ -24,7 +24,6 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
       //endCondition = true//TEMP
     println(s"Game has ended with ${scores.maxBy(_._2)._1} as the Winner!")
 
-
   /*def playRound: Unit =
     var endConditionRound = false
     players.foreach(_.clearHand)                                                                                        // Make sure no players have cards before they have been dealt
