@@ -18,3 +18,10 @@ NOTE: UNCLEAR WHETHER ALL PLAYERS WITH MOST CARDS AND SPADES SHOULD GET THE BONU
 Next I will sort out the Game/Round merging and look into having the game running in console. Although I'm behind in schedule, I feel pretty confident since I have done a lot of the smaller tasks already.
 
 ------------------------------------------------------------------------------
+03.04.2023
+
+I changed from IDEA project structure to sbt since using scalaFX instructions are mainly for sbt.
+
+Saving and loading a game should work flawlessly now. Slight changes might still occurr in ReaderWriter.
+Merged Round and Game like I planned earlier. Next I will continue working on the computer opponent and GUI.
+I still don't have a complettely working model of the game, but I am still confident I will be able finish the project just fine.
