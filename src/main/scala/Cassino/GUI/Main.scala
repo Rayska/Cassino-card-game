@@ -1,16 +1,36 @@
 package Cassino.GUI
 
-import scalafx.Includes._
 import scalafx.application.JFXApp3
+import scalafx.application.JFXApp3.*
 import scalafx.scene.Scene
-import scalafx.scene.paint.Color._
-import scalafx.scene.shape.Rectangle
-import scalafx.scene.layout.Pane
+import scalafx.scene.control.*
+import scalafx.Includes.*
+import scalafx.event.ActionEvent
+
 
 
 object Main extends JFXApp3 {
 
   def start(): Unit =
+    stage = new PrimaryStage {
+      title = "Cassino"
+      scene = new Scene(600, 450) {
+        val buttonNewGame  = new Button("New Game")
+        buttonNewGame.layoutX = 100
+        buttonNewGame.layoutY = 50
+        buttonNewGame.onAction = (event: ActionEvent) => println("New Game created")
+
+        val buttonLoadGame = new Button("Load Game")
+        buttonLoadGame.layoutX = 200
+        buttonLoadGame.layoutY = 100
+        buttonLoadGame.onAction = (event: ActionEvent) => println("Game Loaded")
+
+        content = List(buttonNewGame, buttonLoadGame)
+      }
+    }
+
+
+  /*def start(): Unit =
 
     /*
     Creation of a new primary stage (Application window).
@@ -28,24 +48,25 @@ object Main extends JFXApp3 {
     and set the current window scene.
     */
 
-    val root = Pane() // Simple pane component
+    val root = new AnchorPane()
     val scene = Scene(parent = root) // Scene acts as a container for the scene graph
     stage.scene = scene // Assigning the new scene as the current scene for the stage
 
-    val rectangle = new Rectangle:
-      x = 100
-      y = 100
-      width = 50
-      height = 50
-      fill = Blue //scalafx.scene.paint.Color
+    val newGameButton = Button("New Game")
+    newGameButton.layoutX = 300
+    newGameButton.layoutY = 200
 
-    val anotherRectangle = new Rectangle:
-      x = 100
-      y = 100
-      width = 30
-      height = 70
-      fill = Green
+    val loadGameButton = Button("Load Game")
+    loadGameButton.layoutX = 300
+    loadGameButton.layoutY = 250
 
-    root.children += rectangle
-    root.children += anotherRectangle
+    val connHBox = new VBox()
+    connHBox.setAlignment(Pos.Center)
+    connHBox.getChildren.addAll(newGameButton, loadGameButton)
+    connHBox.setSpacing(30)
+    connHBox.setAlignment(Pos.Center)
+
+    root.getChildren().add(connHBox)*/
+
+
 }

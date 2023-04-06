@@ -20,7 +20,7 @@ object ReaderWriter {
     try
       gameOption = Some(gameActual)
       val game = gameOption.get
-      val w = new PrintWriter(new File("Demo.txt"))
+      val w = new PrintWriter(new File("CassinoSavefile.txt"))
       w.write(s"CASS${game.vNumber}${java.time.LocalDate.now.toString.split('-').reverse.mkString("")}\n")  //Version Number and date
       w.write(createGMEBlock)                                                                               //GME block
       for player <- game.players do
