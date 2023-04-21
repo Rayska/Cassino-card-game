@@ -20,7 +20,7 @@ case class Human(val playerNumber: Int, val playerName: String) extends Player {
 
   def addCardToPile(card: Card)   = pile += card
 
-  def addCardToPlayer(card: Card) = cards += card
+  def addCardToPlayer(cardOption: Option[Card]) = if cardOption.nonEmpty then cards += cardOption.get
 
   def addPoints(add: Int): Unit =
     playerScore += add

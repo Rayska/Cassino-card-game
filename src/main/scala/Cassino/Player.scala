@@ -15,7 +15,7 @@ abstract class Player {
 
   def addCardToPile(card: Card):   Unit
 
-  def addCardToPlayer(card: Card): Unit
+  def addCardToPlayer(cardOption: Option[Card]): Unit
 
   def addPoints(add: Int): Unit
 

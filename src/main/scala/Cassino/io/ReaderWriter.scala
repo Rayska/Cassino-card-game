@@ -16,11 +16,11 @@ object ReaderWriter {
   var gameOption: Option[Game] = None
 
   //HERE STARTS SAVEFILE WRITING AND CREATION
-  def writeSaveFile(gameActual: Game) =
+  def writeSaveFile(gameActual: Game, fileName: String = "CassinoSavefile.txt") =
     try
       gameOption = Some(gameActual)
       val game = gameOption.get
-      val w = new PrintWriter(new File("CassinoSavefile.txt"))
+      val w = new PrintWriter(new File(s"${fileName}"))
       w.write(s"CASS${game.vNumber}${java.time.LocalDate.now.toString.split('-').reverse.mkString("")}\n")  //Version Number and date
       w.write(createGMEBlock)                                                                               //GME block
       for player <- game.players do
@@ -104,12 +104,12 @@ object ReaderWriter {
     val newGame = new Game(playersAndScores.map(_._1) , deck)
     val computers = playersAndScores.filter(k =>
       k._1 match
-            case COM(number: Int, name: String, oldGame: Game) => true
+            case COM(number: Int, name: String, oldGame: Option[Game]) => true
             case _ => false
     )
     computers.foreach(_._1.changeGame(newGame))
     newGame.setDealer(GMEinfo._1)                                       //Set the dealer
-    newGame.setTurn(GMEinfo._2)                                         //Set the turn
+    newGame.setTurn(GMEinfo._2 % (playersAndScores.map(_._1)).size)     //Set the turn
     GMEinfo._3.foreach(newGame.addCardToTable(_))                       //Add TableCards
     try
       playersAndScores.foreach(k => newGame.addPlayerScores(k._1, k._2))
@@ -152,7 +152,7 @@ object ReaderWriter {
       player = new Human(playerNumber, playerName)
     else if block.last == 'C' then
       player = new COM(playerNumber, playerName)
-    playerCards.foreach(player.addCardToPlayer(_))
+    playerCards.foreach(k => player.addCardToPlayer(Some(k)))
     playerPile.foreach(player.addCardToPile(_))
     (player, playerScore)
 

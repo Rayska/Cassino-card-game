@@ -1,9 +1,12 @@
 package Cassino
+
 import scala.collection.mutable.Buffer
 
 class Card(val cardID: Int) {
 
   val suit: Int = cardID / 13       // 0 for Clubs, 1 for Diamonds, 2 for Hearts and 3 for Spades
+  var selected: Boolean = false
+
   val handValue: Int =
     if (cardID + 1) % 13 == 0 then  // Aces
       14
@@ -19,6 +22,9 @@ class Card(val cardID: Int) {
       1
     else
       cardID % 13 + 2
+      
+  def selectToggle: Unit = selected = !selected
+
 
   override def toString: String =
     var ret = Buffer[String]()

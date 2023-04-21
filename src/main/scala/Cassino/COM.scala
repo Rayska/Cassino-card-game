@@ -2,7 +2,7 @@ package Cassino
 
 import scala.collection.mutable.Buffer
 
-case class COM(val playerNumber: Int, val playerName: String, var game: Game = new Game(Buffer[Player](new Human(-1, "Place Holder")))) extends Player {
+case class COM(val playerNumber: Int, val playerName: String, var game: Option[Game] = None) extends Player {
 
   private var playerScore: Int          = 0
 
@@ -20,7 +20,7 @@ case class COM(val playerNumber: Int, val playerName: String, var game: Game = n
 
   def addCardToPile(card: Card)   = pile += card
 
-  def addCardToPlayer(card: Card) = cards += card
+  def addCardToPlayer(cardOption: Option[Card]) = if cardOption.nonEmpty then cards += cardOption.get
 
   def addPoints(add: Int): Unit =
     playerScore += add
@@ -29,9 +29,9 @@ case class COM(val playerNumber: Int, val playerName: String, var game: Game = n
 
   def returnSpadesSize: Int = pile.count(_.suit == 3)
 
-  def changeGame(newgame: Game): Unit = game = newgame
+  def changeGame(newgame: Game): Unit = game = Some(newgame)
 
-  def returnGame: Game = game
+  def returnGame: Game = game.get
 
   override def toString: String =
     playerName + ", COM" + ", Player Number: " + playerNumber
