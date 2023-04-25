@@ -34,21 +34,21 @@ object ReaderWriter {
 
   private def createGMEBlock: String =
     val game = gameOption.get
-    val GME = Buffer[String]("GME", /*"",*/ s"D${game.dealer}" ,s"T${game.turn}")   //Create GME block
+    val lastToTake =
+      game.lastToTake match
+        case None    => "N"
+        case Some(p) => scoreFormattingCreate(p.playerNumber)
+    val GME = Buffer[String]("GME", /*"",*/ s"D${game.dealer}" ,s"T${game.turn}", s"L${lastToTake}")   //Create GME block
     game.tableCards.foreach(GME += cardFormattingCreate(_))                                                 //Table Cards
     //GME.update(1, GME.tail.mkString("").length.toString)
     GME.mkString("") + "\n"
 
   private def createPlRBlock(player: Player): String =
     val game = gameOption.get
-    val score = game.returnScore(player)
+    val score = scoreFormattingCreate(game.returnScore(player))
     val name = player.playerName + "."
-    val scoreFormatted: String =
-      if score < 10 then
-        score.toString
-      else
-        ALPHABET(score.toString.last.toInt - 48).toString
-    val PLR = Buffer[String]("PLR", /*"",*/ player.playerNumber.toString, scoreFormatted, name)
+    val sweeps = scoreFormattingCreate(player.sweeps)
+    val PLR = Buffer[String]("PLR", player.playerNumber.toString, score, sweeps, name)
     player.cards.foreach(PLR += cardFormattingCreate(_))
     PLR += ","
     player.pile.foreach(PLR += cardFormattingCreate(_))
@@ -63,6 +63,12 @@ object ReaderWriter {
     val DCK = Buffer[String]("DCK"/*, (game.deck.deck.size * 2).toString*/)
     game.deck.deck.foreach(DCK += cardFormattingCreate(_))
     DCK.mkString("") + "\n"
+
+  def scoreFormattingCreate(score: Int): String =
+    if score < 10 then
+      return score.toString
+    else
+      return ALPHABET(score.toString.last.toInt - 48).toString
 
   private def cardFormattingCreate(card: Card): String =
     var ret = ""
@@ -83,47 +89,49 @@ object ReaderWriter {
 
   //HERE STARTS LOADING A SAVEFILE AND CREATING A GAME FROM IT
   def loadSaveFile(fileName: String): Game =
-    val source = Source.fromFile(fileName)
-    var dataString = source.mkString("")
-    source.close()
-    val blocks = dataString.split('\n').tail
-    var GMEinfo = (0, 0, Buffer[Card]())
-    val playersAndScores = Buffer[(Player, Int)]()
-    var deck = new Deck
-    var endOfFile = false
-    if !dataString.contains("CASS") then throw CorruptedCassinoFileException(s"Unknown file type, does not contain header ${"CASS"}")
-    else
-      dataString = dataString.dropWhile(_ !='\n')
-      for block <- blocks if !endOfFile do
-          block.take(3).mkString("") match
-            case "GME" => GMEinfo = readGMEBlock(block)
-            case "PLR" => playersAndScores += readPLRBlock(block)
-            case "DCK" => deck = readDCKBlock(block)
-            case "END" => endOfFile = true
-            case  _    =>
-    val newGame = new Game(playersAndScores.map(_._1) , deck)
-    val computers = playersAndScores.filter(k =>
-      k._1 match
-            case COM(number: Int, name: String, oldGame: Option[Game]) => true
-            case _ => false
-    )
-    computers.foreach(_._1.changeGame(newGame))
-    newGame.setDealer(GMEinfo._1)                                       //Set the dealer
-    newGame.setTurn(GMEinfo._2 % (playersAndScores.map(_._1)).size)     //Set the turn
-    GMEinfo._3.foreach(newGame.addCardToTable(_))                       //Add TableCards
     try
+      val source = Source.fromFile(fileName)
+      var dataString = source.mkString("")
+      source.close()
+      val blocks = dataString.split('\n').tail
+      var GMEinfo = (0, 0, Buffer[Card]())
+      val playersAndScores = Buffer[(Player, Int)]()
+      var deck = new Deck
+      var endOfFile = false
+      if !dataString.contains("CASS") then throw CorruptedCassinoFileException(s"Unknown file type, does not contain header ${"CASS"}")
+      else
+        dataString = dataString.dropWhile(_ !='\n')
+        for block <- blocks if !endOfFile do
+            block.take(3).mkString("") match
+              case "GME" => GMEinfo = readGMEBlock(block)
+              case "PLR" => playersAndScores += readPLRBlock(block)
+              case "DCK" => deck = readDCKBlock(block)
+              case "END" => endOfFile = true
+              case  _    =>
+      val newGame = new Game(playersAndScores.map(_._1) , deck)
+      val computers = playersAndScores.filter(k =>
+        k._1 match
+              case COM(number: Int, name: String, oldGame: Option[Game]) => true
+              case _ => false
+      )
+      computers.foreach(_._1.changeGame(newGame))
+      newGame.setDealer(GMEinfo._1)                                       //Set the dealer
+      newGame.setTurn(GMEinfo._2 % (playersAndScores.map(_._1)).size)     //Set the turn
+      GMEinfo._3.foreach(newGame.addCardToTable(_))                       //Add TableCards
       playersAndScores.foreach(k => newGame.addPlayerScores(k._1, k._2))
+      newGame
     catch
+      case e: FileNotFoundException => throw CorruptedCassinoFileException(s"File with name: ${fileName} not found")
       case e:IndexOutOfBoundsException => throw CorruptedCassinoFileException("Player index out of bounds")
-    newGame
 
   private def readGMEBlock(block: String): (Int, Int, Buffer[Card]) =
     //val blocksize = block.slice(3,5)
     val dealer = block(4).toInt - 48
     val turn = block(6).toInt - 48
+    val lastToTake = scoreFormattingRead(block(8))
     val cards = Buffer[Card]()
     val cardsAsString = Buffer[String]()
-    block.drop(7).sliding(2,2).foreach(cardsAsString += _.mkString(""))
+    block.drop(9).sliding(2,2).foreach(cardsAsString += _.mkString(""))
     for cardString <- cardsAsString do
       cards += cardFormattingRead(cardString)
     (dealer, turn, cards)
@@ -131,12 +139,9 @@ object ReaderWriter {
   private def readPLRBlock(block: String): (Player, Int) =
     //val blocksize = block.slice(3,5)
     val playerNumber = block(3).toInt - 48 //Char to Int conversion is not '1' to 1
-    val playerScore =
-      if ALPHABET.contains(block(4)) then
-        ALPHABET.indexOf(block(4)) + 10
-      else
-        block(4).toInt - 48
-    val playerName = block.drop(5).takeWhile(_ != '.').mkString("")
+    val playerScore = scoreFormattingRead(block(4))
+    val playerSweeps = scoreFormattingRead(block(5))
+    val playerName = block.drop(6).takeWhile(_ != '.').mkString("")
     val playerCards = Buffer[Card]()
     val cardsAsString = Buffer[String]()
     val playerPile = Buffer[Card]()
@@ -154,6 +159,7 @@ object ReaderWriter {
       player = new COM(playerNumber, playerName)
     playerCards.foreach(k => player.addCardToPlayer(Some(k)))
     playerPile.foreach(player.addCardToPile(_))
+    for i <- Range(0,playerSweeps) do player.addSweep()
     (player, playerScore)
 
   private def readDCKBlock(block: String): Deck =
@@ -162,6 +168,12 @@ object ReaderWriter {
     block.drop(3).sliding(2,2).foreach(cardsAsString += _.mkString(""))
     cardsAsString.foreach(cards += cardFormattingRead(_))
     new Deck(cards)
+
+  private def scoreFormattingRead(score: Char): Int =
+    if ALPHABET.contains(score) then
+        ALPHABET.indexOf(score) + 10
+    else
+      score.toInt - 48
 
   private def cardFormattingRead(cardString: String): Card =
     if cardString.length == 2 then

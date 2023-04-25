@@ -12,7 +12,7 @@ class Card(val cardID: Int) {
       14
     else if cardID == 21 then       // 10 of Diamonds
       16
-    else if cardID == 39 then       // 3 of Spades
+    else if cardID == 39 then       // 2 of Spades
       15
     else
       cardID % 13 + 2
