@@ -8,23 +8,25 @@ import scala.collection.mutable.Buffer
 
 class Game(var players: Buffer[Player], var deck: Deck = new Deck){
 
-  val vNumber:      String                = "0001"
-  val scores:       Buffer[(Player, Int)] = players.zip(Buffer.fill(players.size)(0))
-  val tableCards:   Buffer[Card]          = Buffer()
-  var dealer:       Int                   = 0
-  var turn:         Int                   = (dealer + 1) % players.size // Round starts from the player next to the dealer
-  var gameOver: Boolean                   = false
-  var lastToTake:   Option[Player]        = None
+  val vNumber:      String                       = "0001"
+  val scores:       Buffer[(Player, Int)]        = players.zip(Buffer.fill(players.size)(0))
+  val tableCards:   Buffer[Card]                 = Buffer()
+  var dealer:       Int                          = 0
+  var turn:         Int                          = (dealer + 1) % players.size // Round starts from the player next to the dealer
+  var lastToTake:   Int                          = -1                          // Player nummber of the last players who took cards from the table
+  var roundNumber:  Int                          = 0
+  var gameOver:     Boolean                      = false
+  //val movesByCOM:   Buffer[(Card, Buffer[Card])] = Buffer()                    //Moves made by COM opponents since last Human player's moves, maybe add COM as an element too?
 
-  def playGame: Unit =
+  /*def playGame(): Unit =
     while !gameOver do
       //this.playRound
-      this.updateScores
+      this.updateScores()
       dealer += 1
       turn = (dealer + 1) % players.size
       gameOver = !scores.forall(_._2 < 16)
       //endCondition = true//TEMP
-    println(s"Game has ended with ${scores.maxBy(_._2)._1} as the Winner!")
+    println(s"Game has ended with ${scores.maxBy(_._2)._1} as the Winner!")*/
 
   /*def playRound: Unit =
     var endConditionRound = false
@@ -48,11 +50,13 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
       k.clearHand()
       k.clearPile()
       k.clearSweeps())
-    this.dealCards
+    this.dealCards()
+    turnCheck()
+    roundNumber += 1
 
-  def endRound(): Boolean =                                                                                             //Return value states if game is over
+  def endRound(): Unit =                                                                                             //Return value states if game is over
     val multipleScoreReceiversAllowed = false                                                                           //Can be decided later whether everyone with most cards/spades gets the points.
-    tableCards.foreach(lastToTake.get.addCardToPile(_))
+    tableCards.foreach(players.find(_.playerNumber == lastToTake).get.addCardToPile(_))
     //val mostCards  = players.filter(k => k.returnPileSize == players.maxBy(l => l.returnPileSize).returnPileSize)       // Players with largest piles
     //val mostSpades = players.filter(k => k.returnSpadesSize == players.maxBy(l => l.returnSpadesSize).returnSpadesSize) // Players with most Spades
     val mostCards = players.groupBy(_.returnPileSize)(players.groupBy(_.returnPileSize).keys.max)
@@ -64,14 +68,14 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
       if mostCards.size == 1 then mostCards.head.addPoints(1)
       if mostSpades.size == 1 then mostSpades.head.addPoints(2)
     //this.deck.clear()
-    this.updateScores
+    this.updateScores()
     gameOver = scores.exists(_._2 >= 16)
     dealer = (dealer + 1) % players.size
     turn = (dealer + 1) % players.size
-    lastToTake = None
-    if gameOver then
-      return true
-    return false
+    lastToTake = -1
+    //if gameOver then
+    //  return true
+    //false
 
   /*def playTurn: (Buffer[(Card, Buffer[Card])], Buffer[Card]) = //Separate into two or more methods where one part is dedicated to handling input (moves)
     var whosTurn = players(turn % players.size)                                                                         // Which player's turn it is (indexes so starts from 0)
@@ -93,39 +97,50 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
     turn += 1
     (Buffer((new Card(52), Buffer(new Card(52), new Card(52)))), Buffer(new Card(52)))  */
 
-  def playTurn(usedForTaking: Buffer[Card], toBeTaken: Buffer[Card]) : (Boolean, Boolean, Boolean) = //Booleans: Play is valid, Round is over, Game is over
+  def playTurn(usedForTaking: Buffer[Card], toBeTaken: Buffer[Card]) : Boolean =
     var whosTurn = players(turn % players.size)
     if usedForTaking.nonEmpty then //&& usedForTaking.forall(usedForTaking.head == _) then
       if toBeTaken.nonEmpty then
         if checkMoveLegitimacyTake(usedForTaking, toBeTaken) then
           whosTurn.addCardToPile(usedForTaking.head)
           whosTurn.removeCardFromPlayer(usedForTaking.head)
-          usedForTaking.head.selectToggle
+          usedForTaking.head.unselect()
           toBeTaken.foreach(k =>
-            k.selectToggle
+            k.unselect()
             whosTurn.addCardToPile(k)
             this.removeCardFromTable(k))
           whosTurn.addCardToPlayer(deck.draw)
-          if tableCards.isEmpty then whosTurn.addSweep()
-          lastToTake = Some(whosTurn)
+          if tableCards.isEmpty then
+            whosTurn.addSweep()
+          lastToTake = whosTurn.playerNumber
           turn = (turn + 1) % players.size
         else
-          return (false, false, false)
+          return false
       else if checkPlayerHasCard(usedForTaking) then
         this.addCardToTable(usedForTaking.head)
         whosTurn.removeCardFromPlayer(usedForTaking.head)
-        usedForTaking.head.selectToggle
+        usedForTaking.head.unselect()
         whosTurn.addCardToPlayer(deck.draw)
         turn = (turn + 1) % players.size
       if players.forall(_.cards.isEmpty) then
-        if endRound() then
-          return (true, true, true)
-        else
+        endRound()
+        if !gameOver then
           setupRound()
-          return (true, true, false)
+        //turnCheck()
+        return true
       else
-        return (true, false, false)
-    return (false, false, false)
+        //turnCheck()
+        return true
+    false
+
+  def turnCheck(): Boolean =
+    players(turn) match
+      case COM(number: Int, name: String, game: Option[Game]) =>
+        players(turn).makePlay()
+        true
+      case _ =>
+        println(s"game.turnCheck called for ${players(turn)}")
+        false
 
   /*var whosTurn = players(turn % players.size)
     if move.collect(_._2).flatten.isEmpty && move.collect(_._1).nonEmpty && checkPlayerHasCard(move.collect(_._1)) then
@@ -195,7 +210,7 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
 
   def onlyOneDistinct(usedForTaking: Buffer[Card]) = usedForTaking.forall(usedForTaking.head.cardID == _.cardID)
 
-  def dealCards: Unit =
+  def dealCards(): Unit =
     for player <- players do //to the players
       val hand = Buffer.tabulate(4)(k => deck.draw.getOrElse(new Card(52)))   // Card(52).toString will be 2 of Unknown suit
       for card <- hand do
@@ -203,7 +218,7 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
     for card <- Buffer.tabulate(4)(k => deck.draw.getOrElse(new Card(52))) do //to the table
       tableCards += card
 
-  def updateScores: Unit =    // For updating scores after each round
+  def updateScores(): Unit =    // For updating scores after each round
     for player <- players do
       val index = player.playerNumber
       scores(index) = (player , scores(index)._2 + player.returnRoundScore)
@@ -215,7 +230,7 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
 
   def returnScore(player: Player): Int = scores.find(_._1 == player).getOrElse(((new Human(-1, "Invalid player")), -1))._2
 
-  def saveGame = ReaderWriter.writeSaveFile(this)
+  def saveGame(): Unit = ReaderWriter.writeSaveFile(this)
 
   def addCardToTable(card: Card): Unit = tableCards += card
 
@@ -225,10 +240,19 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
 
   def setTurn(newTurn: Int): Unit  = this.turn = newTurn % players.size
 
+  def setLastTaker(newTakerNumber: Int): Unit = this.lastToTake = newTakerNumber
+
+  def setRoundOver(newRoundNumber: Int): Unit = this.roundNumber = newRoundNumber
+
+  def setGameOver(newGameOver: Boolean): Unit = this.gameOver = newGameOver
+
   def addPlayerScores(player: Player, score: Int): Unit = scores.update(scores.indexOf(scores.find(_._1 == player).get), (player, score)) // Set correct scores for players when loading from a file
 
   def addPlayer(player: Player): Unit = players += player
 
+  def returnRoundNumber: Int = roundNumber
+
+  def returnGameOver: Boolean = gameOver
 }
 
 

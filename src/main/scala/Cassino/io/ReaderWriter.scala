@@ -7,7 +7,6 @@ import java.util.NoSuchElementException
 import scala.io.Source
 import scala.collection.mutable.Buffer
 
-
 val ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 //import scala.util.matching.Regex val ALPHABET = "[A-Z]".r in Regex
 
@@ -31,14 +30,12 @@ object ReaderWriter {
     catch
       case e:NoSuchElementException => throw NoSuchElementException(s"${e} is None so .get causes an error")//Should be unreachable but you never know
 
-
   private def createGMEBlock: String =
     val game = gameOption.get
-    val lastToTake =
-      game.lastToTake match
-        case None    => "N"
-        case Some(p) => scoreFormattingCreate(p.playerNumber)
-    val GME = Buffer[String]("GME", /*"",*/ s"D${game.dealer}" ,s"T${game.turn}", s"L${lastToTake}")   //Create GME block
+    val lastToTake = if game.lastToTake == -1 then "-" else scoreFormattingCreate(game.lastToTake)
+    val roundNumber: String = scoreFormattingCreate(game.returnRoundNumber)
+    val gameOver: String = if game.gameOver then "T" else "F"
+    val GME = Buffer[String]("GME", /*"",*/ s"D${game.dealer}" ,s"T${game.turn}", s"L${lastToTake}", s"R${roundNumber}", s"G${gameOver}")   //Create GME block
     game.tableCards.foreach(GME += cardFormattingCreate(_))                                                 //Table Cards
     //GME.update(1, GME.tail.mkString("").length.toString)
     GME.mkString("") + "\n"
@@ -53,7 +50,7 @@ object ReaderWriter {
     PLR += ","
     player.pile.foreach(PLR += cardFormattingCreate(_))
     player match
-      case Human(number, name)      => PLR += "U"
+      case Human(number, name) => PLR += "U"
       case COM(number, name, game)  => PLR += "C"
     //PLR.update(1, PLR.tail.mkString("").length.toString)
     PLR.mkString("") + "\n"
@@ -66,9 +63,9 @@ object ReaderWriter {
 
   def scoreFormattingCreate(score: Int): String =
     if score < 10 then
-      return score.toString
+      score.toString
     else
-      return ALPHABET(score.toString.last.toInt - 48).toString
+      ALPHABET(score.toString.last.toInt - 48).toString
 
   private def cardFormattingCreate(card: Card): String =
     var ret = ""
@@ -94,7 +91,7 @@ object ReaderWriter {
       var dataString = source.mkString("")
       source.close()
       val blocks = dataString.split('\n').tail
-      var GMEinfo = (0, 0, Buffer[Card]())
+      var GMEinfo = (0, 0, 0, 0, false, Buffer[Card]())
       val playersAndScores = Buffer[(Player, Int)]()
       var deck = new Deck
       var endOfFile = false
@@ -117,24 +114,30 @@ object ReaderWriter {
       computers.foreach(_._1.changeGame(newGame))
       newGame.setDealer(GMEinfo._1)                                       //Set the dealer
       newGame.setTurn(GMEinfo._2 % (playersAndScores.map(_._1)).size)     //Set the turn
-      GMEinfo._3.foreach(newGame.addCardToTable(_))                       //Add TableCards
+      GMEinfo._6.foreach(newGame.addCardToTable(_))                       //Add TableCards
+      newGame.setLastTaker(GMEinfo._3)
+      newGame.setRoundOver(GMEinfo._4)
+      newGame.setGameOver(GMEinfo._5)
       playersAndScores.foreach(k => newGame.addPlayerScores(k._1, k._2))
+      val lmao = newGame
       newGame
     catch
       case e: FileNotFoundException => throw CorruptedCassinoFileException(s"File with name: ${fileName} not found")
       case e:IndexOutOfBoundsException => throw CorruptedCassinoFileException("Player index out of bounds")
 
-  private def readGMEBlock(block: String): (Int, Int, Buffer[Card]) =
+  private def readGMEBlock(block: String): (Int, Int, Int, Int, Boolean, Buffer[Card]) =
     //val blocksize = block.slice(3,5)
     val dealer = block(4).toInt - 48
     val turn = block(6).toInt - 48
-    val lastToTake = scoreFormattingRead(block(8))
+    val lastToTake =  scoreFormattingRead(block(8))
+    val roundNumber: Int = scoreFormattingRead(block(10))
+    val gameOver: Boolean = if block(12) == 'T' then true else false
     val cards = Buffer[Card]()
     val cardsAsString = Buffer[String]()
-    block.drop(9).sliding(2,2).foreach(cardsAsString += _.mkString(""))
+    block.drop(13).sliding(2,2).foreach(cardsAsString += _.mkString(""))
     for cardString <- cardsAsString do
       cards += cardFormattingRead(cardString)
-    (dealer, turn, cards)
+    (dealer, turn, lastToTake, roundNumber, gameOver, cards)
 
   private def readPLRBlock(block: String): (Player, Int) =
     //val blocksize = block.slice(3,5)
@@ -170,7 +173,9 @@ object ReaderWriter {
     new Deck(cards)
 
   private def scoreFormattingRead(score: Char): Int =
-    if ALPHABET.contains(score) then
+    if score == '-' then
+      -1
+    else if ALPHABET.contains(score) then
         ALPHABET.indexOf(score) + 10
     else
       score.toInt - 48

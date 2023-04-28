@@ -3,6 +3,8 @@ package Cassino
 import scala.collection.mutable.Buffer
 import scala.util.Random
 
+import scala.collection.mutable.Set
+
 class Deck(var deck: Buffer[Card] = Random.shuffle(Buffer.tabulate(52)(k => new Card(k)))) {
 
  def draw: Option[Card] =
@@ -13,5 +15,6 @@ class Deck(var deck: Buffer[Card] = Random.shuffle(Buffer.tabulate(52)(k => new 
 
  def clear(): Unit = deck.clear()
 
- def isNotFull: Boolean = deck.size != 52
+ def returnDeckSize: Int = deck.size
+
 }

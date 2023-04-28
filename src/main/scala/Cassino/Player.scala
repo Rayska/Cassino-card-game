@@ -11,6 +11,8 @@ abstract class Player {
   val pile:         Buffer[Card]
   var sweeps:       Int
 
+  def makePlay(): Unit
+
   def returnRoundScore: Int
   
   def clearHand(): Unit

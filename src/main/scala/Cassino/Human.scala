@@ -4,6 +4,8 @@ import scala.collection.mutable.Buffer
 
 case class Human(val playerNumber: Int, val playerName: String) extends Player {
 
+  private var gameOption: Option[Game] = None
+
   private var additionalPoints: Int          = 0 //Points for most cards, most spades
 
   val cards:               Buffer[Card] = Buffer()
@@ -33,8 +35,7 @@ case class Human(val playerNumber: Int, val playerName: String) extends Player {
   
   def removeCardFromPlayer(card: Card): Unit = cards -= card
 
-  def addPoints(add: Int): Unit =
-    additionalPoints += add
+  def addPoints(add: Int): Unit = additionalPoints += add
     
   def addSweep(): Unit = sweeps += 1
 
@@ -46,9 +47,11 @@ case class Human(val playerNumber: Int, val playerName: String) extends Player {
   
   def returnSweeps: Int = sweeps
 
-  def changeGame(game: Game): Unit = None
+  def changeGame(newgame: Game): Unit = gameOption = Some(newgame)
 
   def returnGame: Game = new Game(Buffer[Player](new Human(-1, "Place Holder")))
+  
+  def makePlay(): Unit = println("makePlay called for Human!!!")
 
   override def toString: String =
     playerName + ", Human" + ", Player Number: " + playerNumber

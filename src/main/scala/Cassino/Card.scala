@@ -23,8 +23,9 @@ class Card(val cardID: Int) {
     else
       cardID % 13 + 2
       
-  def selectToggle: Unit = selected = !selected
-
+  def select(): Unit = selected = true
+  
+  def unselect(): Unit = selected = false
 
   override def toString: String =
     var ret = Buffer[String]()
