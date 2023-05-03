@@ -4,6 +4,8 @@ import Cassino.*
 import Cassino.io.{CorruptedCassinoFileException, ReaderWriter}
 
 import scala.collection.mutable.Buffer
+import scala.math.abs
+
 import scalafx.Includes.*
 import scalafx.application.JFXApp3
 import scalafx.application.JFXApp3.*
@@ -19,6 +21,9 @@ import scalafx.scene.input.{KeyCode, KeyEvent, MouseEvent}
 import scalafx.scene.text.*
 import scalafx.collections.ObservableBuffer
 import scalafx.scene.control.TableView.ResizeFeatures
+import scalafx.scene.paint.{Color, Paint}
+import scalafx.beans.binding.ObjectBinding
+import scalafx.scene.control.ScrollPane.*
 
 import java.util.NoSuchElementException
 
@@ -28,28 +33,29 @@ object Main extends JFXApp3 {
   //var scores: Option[Buffer[(Player, Int)]] = None
   private val windowWidth = 1920
   private val windowHeight = 1000
-  private val pCardsHBoxWidth = windowWidth * 0.6
+  private val pCardsHBoxWidth = windowWidth * 0.321
   private val pCardsHBoxHeight = windowHeight * 0.23
-  private val ScrollerWidth = windowWidth
-  private val scrollerHeight = 275
-  private val buttonWidth = 225
-  private val buttonHeight = 75
-  private val tableCardWidth = 165
-  private val tableCardHeight = scrollerHeight
+  private val tCardsScrollerWidth = windowWidth
+  private val tCardsScrollerHeight = windowHeight * 0.275
+  private val buttonWidth = windowWidth * 0.117
+  private val buttonHeight = windowHeight * 0.075
+  private val tableCardWidth = windowWidth * 0.086
+  private val tableCardHeight = tCardsScrollerHeight
   private val playerCardWidth = 150
   private val playerCardHeight = pCardsHBoxHeight
+  private val opponentCardHeight = 35
+  private val opponentCardWidth = playerCardWidth / 5
+  private val playLogCardHeight = 80
+  private val playLogCardWidth = playerCardWidth / 2
+  private val playLogScrollerWidth = (windowWidth - pCardsHBoxWidth) / 2 * 0.95
+  private val playLogScrollerHeight = windowHeight / 2 * 0.95
 
-  //val buttonHBoxWidth = 3 * buttonWidth + 2 * (buttonWidth / 5)
-  //val buttonHBoxHeight = 75
-  //val cardsToBeTaken = Buffer[Card]()
-
-  //var cardUsedForTaking: Option[Card] = None
-  //var midSelection = false
-
+  var gameInProgess = false
+  var playLogSize = 0
 
   def start(): Unit =
     val mainMenu = new PrimaryStage {
-        title = "Main Menu"
+        title = "Cassino"
         scene = new Scene(windowWidth, windowHeight) {
           val stack = new StackPane()
 
@@ -60,14 +66,15 @@ object Main extends JFXApp3 {
           val newFile  = new MenuItem("New")
           val loadFile = new MenuItem("Load")
           val saveFile = new MenuItem("Save")
+
           fileMenu.items = List(newFile, loadFile, saveFile)
+
           menuBar.menus = List(fileMenu)
-          menuBar.alignmentInParent = Pos.TopCenter
           menuBar.minWidth = windowWidth
 
           newFile.onAction = (event: ActionEvent) => {
             val players = Buffer[Player]()
-            val cDialog = new ChoiceDialog[Int](2, Seq(2,3,4,5)) {
+            val cDialog = new ChoiceDialog[Int](2, Seq(2,3,4,5,6)) { //Can add more players here if needed but other players cards might show up improperly on screen
               initOwner(stage)
               title = ""
               headerText = "Create a New Game"
@@ -113,12 +120,65 @@ object Main extends JFXApp3 {
                 if i == numOfPlayers then
                   val game = new Game(players)
                   gameOption = Some(game)
-                  println("Game Created")
+                  println("Game Created") //
                   tCardsHBox.children.clear()
                   pCardsHBox.children.clear()
                   game.players.foreach(_.changeGame(game))
-                  gameInProgress()
+                  stack.children = anchor
+                  opponentHBox.children = Vector.tabulate(game.players.size - 1)(k => new VBox())
+                  gameInProgess = true
+                  playLogVBox.children.clear()
+                  playLogSize = 0
+                  updateAllCards()
                   game.setupRound()
+                  updateAllCards()
+                  var roundNumber = game.returnRoundNumber
+                  while gameInProgess && !game.returnGameOver && (game.players(game.turn) match
+                    case COM(playerNumber, playerName, gameOption) => true
+                    case _ => false)
+                  do
+                    game.turnCheck()
+                    if roundNumber != game.returnRoundNumber && !game.returnGameOver then
+                      new Alert(AlertType.Information, ""){headerText = "New Round!"}.showAndWait()
+                      roundNumber = game.returnRoundNumber
+                    //else if game.returnGameOver then
+                    //  gameOver(game)
+                    updateAllCards()
+                  if game.returnGameOver then
+                    gameOver(game)
+                    updateAllCards()
+                 // while game.playTurn(game.turn) match
+                 //     case COM(playerNumber, playerName, gameOption) => true
+                 //     case _ => false
+                 // do
+                 //   game.turnCheck()
+                 //   if roundNumber != game.returnRoundNumber && !game.returnGameOver then
+                 //     new Alert(AlertType.Information, ""){headerText = "New Round!"}.showAndWait()
+                 //     roundNumber = game.returnRoundNumber
+                 //   else if game.returnGameOver then
+                 //     gameOver(game)
+                 //   updateAllCards()
+                 // //if game.players.forall(
+                 // //  _ match
+                 // //    case COM(playerNumber, playerName, gameOption) => true
+                 // //    case _ => false
+                 // //) then
+                 //     while game.turnCheck() do
+                 //       if roundNumber != game.returnRoundNumber && !game.returnGameOver then
+                 //         new Alert(AlertType.Information, ""){headerText = "New Round!"}.showAndWait()
+                 //         roundNumber = game.returnRoundNumber
+                 //       else if game.returnGameOver then
+                 //         gameOver(game)
+                 //       updateAllCards()
+                  //if game.setupRound() then
+                  //  updateAllCards()
+                  //  while game.turnCheck() do
+                  //    if roundNumber != game.returnRoundNumber && !game.returnGameOver then
+                  //      new Alert(AlertType.Information, ""){headerText = "New Round!"}.showAndWait()
+                  //      roundNumber = game.returnRoundNumber
+                  //    else if game.returnGameOver then
+                  //      gameOver(game)
+                  //    updateAllCards()
               }
             }
           }
@@ -143,12 +203,14 @@ object Main extends JFXApp3 {
             if gameOption.nonEmpty then
               tCardsHBox.children.clear()
               pCardsHBox.children.clear()
-              //cardsToBeTaken.clear()
-              //cardUsedForTaking = None
-              //midSelection = false
-              println("Game Loaded")
-              println(gameOption.get.players)
-              gameInProgress()
+              println("Game Loaded")//
+              println(gameOption.get.players)//
+              stack.children = anchor
+              opponentHBox.children = Vector.tabulate(gameOption.get.players.size - 1)(k => new VBox())
+              gameInProgess = true
+              playLogVBox.children.clear()
+              playLogSize = 0
+              updateAllCards()
               gameOption.get.turnCheck()
           }
 
@@ -173,103 +235,50 @@ object Main extends JFXApp3 {
             }
           }
 
+          val opponentHBox = new HBox(30)
+          opponentHBox.minWidth = windowWidth
+          opponentHBox.alignment = Pos.BottomCenter
+
+          AnchorPane.setTopAnchor(opponentHBox, 25)
+
+          val deckSizePane = new TilePane()
+          deckSizePane.minWidth = buttonWidth
+
+          var deckSize = new Text("")
+          deckSize.setFont(new Font("Comic Sans MS", 16))
+
+          deckSizePane.alignment = Pos.BottomCenter
+          deckSizePane.children = deckSize
+
+          AnchorPane.setTopAnchor(deckSizePane, pCardsHBoxHeight )
+          AnchorPane.setLeftAnchor(deckSizePane, (windowWidth / 2) - (buttonWidth / 2))
+          AnchorPane.setRightAnchor(deckSizePane, (windowWidth / 2) - (buttonWidth / 2))
+
           val tCardsHBox = new HBox(5)
-          tCardsHBox.minWidth  = ScrollerWidth
-          tCardsHBox.minHeight = scrollerHeight - 5
+          tCardsHBox.minWidth  = tCardsScrollerWidth - 2
+          tCardsHBox.minHeight = tCardsScrollerHeight - 2 //Apparently this way scrollbars become visible only after reaching certain card limit
           tCardsHBox.alignment = Pos.Center
 
-          //AnchorPane.setTopAnchor(tCardsHBox, (windowHeight - tCardsHBoxHeight - pCardsHBoxHeight) / 2)
-          //AnchorPane.setLeftAnchor(tCardsHBox, 0)
-          //AnchorPane.setRightAnchor(tCardsHBox, 0)
-          //AnchorPane.setBottomAnchor(tCardsHBox, (windowHeight - tCardsHBoxHeight - pCardsHBoxHeight) / 2 + pCardsHBoxHeight)
+          val tCardsScroller = new ScrollPane()
 
-          val scoller = new ScrollPane()
+          tCardsScroller.minWidth  = tCardsScrollerWidth
+          tCardsScroller.minHeight = tCardsScrollerHeight
 
-          scoller.minWidth  = ScrollerWidth
-          scoller.minHeight = scrollerHeight
-          //scoller.alignment = Pos.Center
+          AnchorPane.setTopAnchor(tCardsScroller, (windowHeight - tCardsScrollerHeight - pCardsHBoxHeight) / 2)
+          AnchorPane.setLeftAnchor(tCardsScroller, 0)
+          AnchorPane.setRightAnchor(tCardsScroller, 0)
 
-          AnchorPane.setTopAnchor(scoller, (windowHeight - scrollerHeight - pCardsHBoxHeight) / 2)
-          AnchorPane.setLeftAnchor(scoller, 0)
-          AnchorPane.setRightAnchor(scoller, 0)
+
+
+
 
           val playButton = new Button("PLAY")
           playButton.minWidth = buttonWidth
           playButton.minHeight = buttonHeight
-          playButton.onMouseClicked = (event: MouseEvent) => {
-            if gameOption.nonEmpty then
-              val game = gameOption.get
-              val cardUsedForTaking = game.players(game.turn).cards.filter(_.selected)
-              val cardsToBeTaken = game.tableCards.filter(_.selected)
-              var roundNumber = game.returnRoundNumber
-              println((cardUsedForTaking, cardsToBeTaken)) //
-              val successfulMoveByHuman = game.playTurn(cardUsedForTaking, cardsToBeTaken)
-              if !successfulMoveByHuman then
-                new Alert(AlertType.Information, "Invalid move!").showAndWait()
-                cardUsedForTaking.foreach(_.unselect())
-                cardsToBeTaken.foreach(_.unselect())
-                updateTableCards(game)
-                updatePlayerCards(game)
-              else if roundNumber != game.returnRoundNumber && !game.returnGameOver then
-                new Alert(AlertType.Information, "New Round!").showAndWait()
-                updateTableCards(game)
-                updatePlayerCards(game)
-                //tCardsHBox.children = List()
-                //pCardsHBox.children = List()
-
-                //display scoreboard and winner
-              if successfulMoveByHuman && !game.returnGameOver then
-                while game.turnCheck() do
-                  if roundNumber != game.returnRoundNumber && !game.returnGameOver then
-                    new Alert(AlertType.Information, "New Round!").showAndWait()
-                  else if game.returnGameOver then
-                    new Alert(AlertType.Information, "Game Over!").showAndWait()
-                  updatePlayerCards(game)
-                  updateTableCards(game)
-
-              //cardsToBeTaken.clear()
-              //cardUsedForTaking = None
-              //midSelection = false
-          }
-
-          AnchorPane.setBottomAnchor(playButton, ((windowHeight - scrollerHeight - pCardsHBoxHeight) / 2 - buttonHeight) / 3 + pCardsHBoxHeight)
+          playButton.onMouseClicked = (event: MouseEvent) => playAction()
+          AnchorPane.setBottomAnchor(playButton, ((windowHeight - tCardsScrollerHeight - pCardsHBoxHeight) / 2 - buttonHeight) / 3 + pCardsHBoxHeight)
           AnchorPane.setLeftAnchor(playButton, windowWidth / 2 - buttonWidth / 2)
           AnchorPane.setRightAnchor(playButton, windowWidth / 2 - buttonWidth / 2)
-
-          /*val addButton = new Button("ADD")
-          addButton.minWidth = buttonWidth
-          addButton.minHeight = buttonHBoxHeight
-          addButton.onMouseClicked = (event: MouseEvent) => {
-            if gameOption.nonEmpty && gameOption.get.players(gameOption.get.turn).cards.exists(_.selected) then
-              cardUsedForTaking = gameOption.get.players(gameOption.get.turn).cards.find(_.selected)
-              cardsToBeTaken += ((cardUsedForTaking.get, gameOption.get.tableCards.filter(k => k.selected && !cardsToBeTaken.collect(_._2).flatten.contains(k))))
-              midSelection = true
-          }
-
-          val clearButton = new Button("CLEAR")
-          clearButton.minWidth = buttonWidth
-          clearButton.minHeight = buttonHBoxHeight
-          clearButton.onMouseClicked = (event: MouseEvent) => {
-          if gameOption.nonEmpty then
-              val game = gameOption.get
-              midSelection = false
-              if cardUsedForTaking.nonEmpty then
-                replaceSelectedPlayerCard(game.players(game.turn).cards.indexOf(cardUsedForTaking.get), game)
-                cardUsedForTaking = None
-              cardsToBeTaken.collect(_._2).flatten.distinct.foreach(k => replaceSelectedTableCard(game.tableCards.indexOf(k), game))
-              cardsToBeTaken.clear()
-          }*/
-
-          /*val buttonHBox = new HBox(buttonWidth / 5)
-          buttonHBox.minWidth = buttonHBoxWidth
-          buttonHBox.minHeight = buttonHBoxHeight
-          buttonHBox.alignment = Pos.Center
-
-          AnchorPane.setBottomAnchor(buttonHBox, ((windowHeight - tCardsHBoxHeight - pCardsHBoxHeight) / 2 - buttonHBoxHeight) / 3 + pCardsHBoxHeight)
-          AnchorPane.setLeftAnchor(buttonHBox, windowWidth / 2 - buttonHBoxWidth / 2)
-          AnchorPane.setRightAnchor(buttonHBox, windowWidth / 2 - buttonHBoxWidth / 2)
-
-          buttonHBox.children = List(addButton, playButton, clearButton)*/
 
           val nameTilePane = new TilePane()
           nameTilePane.minWidth = buttonWidth
@@ -294,61 +303,190 @@ object Main extends JFXApp3 {
           AnchorPane.setLeftAnchor(pCardsHBox, 385)
           AnchorPane.setRightAnchor(pCardsHBox, 385)
 
+          val playLogVBox = new VBox(5)
 
+          val playLogScroller = new ScrollPane()
+
+          playLogScroller.minWidth  = playLogScrollerWidth
+          playLogScroller.minHeight = playLogScrollerHeight
+          playLogScroller.maxHeight = playLogScrollerHeight
+
+          playLogScroller.setFitToWidth(true)
+          playLogScroller.setFitToHeight(true)
+
+          //playLogScroller.vmax = 1
+          //playLogScroller.vmin = 1
+
+          AnchorPane.setBottomAnchor(playLogScroller, 0)
+          AnchorPane.setRightAnchor(playLogScroller, 0)
+
+
+          val asdf = Buffer(KeyCode.A, KeyCode.S, KeyCode.D, KeyCode.F)
+          val digits = Buffer(KeyCode.Digit1, KeyCode.Digit2, KeyCode.Digit3, KeyCode.Digit4, KeyCode.Digit5, KeyCode.Digit6, KeyCode.Digit7, KeyCode.Digit8, KeyCode.Digit9, KeyCode.Digit0)
           anchor.onKeyPressed = (e: KeyEvent) => {
-            if gameOption.nonEmpty && e.code == KeyCode.S then
-              val data = ObservableBuffer[Player]()
-              gameOption.get.players.foreach(data += _)
-              val table = new TableView[Player](data)
-              //table.minWidth = windowWidth * 0.5
-              table.maxWidth = 5 * tableCardWidth
-              //table.minHeight = windowHeight * 0.3
-              table.maxHeight = 24 + 25 * gameOption.get.players.size //windowHeight * 0.3
-              val col1 = new TableColumn[Player, Int]("Player #")
-              col1.cellValueFactory = cdf => ObjectProperty(cdf.value.playerNumber)
-              val col2 = new TableColumn[Player, String]("Name")
-              col2.cellValueFactory = cdf => StringProperty(cdf.value.playerName)
-              val col3 = new TableColumn[Player, Int]("Score")
-              col3.cellValueFactory = cdf => ObjectProperty(gameOption.get.scores.find(_._1 == cdf.value).get._2)
-              val col4 = new TableColumn[Player, Int]("Cards Collected")
-              col4.cellValueFactory = cdf => ObjectProperty(cdf.value.returnPileSize)
-              val col5 = new TableColumn[Player, Int]("Spades Collected")
-              col5.cellValueFactory = cdf => ObjectProperty(cdf.value.returnSpadesSize)
-              val col6 = new TableColumn[Player, Int]("Sweeps")
-              col6.cellValueFactory = cdf => ObjectProperty(cdf.value.returnSweeps)
-              val col7 = new TableColumn[Player, Int]("Aces")
-              col7.cellValueFactory = cdf => ObjectProperty(cdf.value.returnAcesSize)
-              table.columns ++= ObservableBuffer(col1, col2, col3, col4, col5, col6, col7)
-              table.setColumnResizePolicy(TableView.ConstrainedResizePolicy)
-              table.sortOrder.add(col1)
-              stack.children += table
+            val ec = e.code
+            if gameOption.nonEmpty then
+              val game = gameOption.get
+              if e.code == KeyCode.G then
+                if ec == KeyCode.G then
+                  stack.children += scoreboard(gameOption.get)
+              else if asdf.contains(ec) then
+                val index = asdf.indexOf(ec)
+                if game.players(game.turn).cards.size > index then
+                  replaceSelectedPlayerCard(index,game)
+              else if digits.contains(ec) then
+                val index = digits.indexOf(ec)
+                if game.tableCards.size > index then
+                  replaceSelectedTableCard(index, game)
           }
 
           anchor.onKeyReleased = (e: KeyEvent) => {
-            if gameOption.nonEmpty && e.code == KeyCode.S then
-              stack.children = anchor
+            if gameOption.nonEmpty then
+              if e.code == KeyCode.Enter || e.code == KeyCode.X then
+                playAction()
+              else if e.code == KeyCode.G then
+                stack.children = anchor
           }
-          //anchor.children += menuBar
-          //anchor.children += tCardsHBox
-          //anchor.children += playButton
-          //anchor.children += playerName
-          //anchor.children += nameTilePane
-          //anchor.children += pCardsHBox
 
-          val gameView = Vector(menuBar, scoller, playButton, nameTilePane, pCardsHBox)
+          anchor.setBackground(Background.fill(Color.color(0.208, 0.47, 0.275))) //#357846 (0x)
+          tCardsHBox.setBackground(Background.fill(Color.color(0.208, 0.47, 0.275)))
+          tCardsScroller.setBackground(Background.fill(Color.color(0.208, 0.47, 0.275)))
+          playLogVBox.setBackground(Background.fill(Color.color(0.208, 0.47, 0.275)))
+          playLogScroller.setBackground(Background.fill(Color.color(0.208, 0.47, 0.275)))
 
-          scoller.content = tCardsHBox
+
+          val gameView = Vector(menuBar, opponentHBox, deckSizePane, tCardsScroller, playButton, nameTilePane, pCardsHBox, playLogScroller)
+
+          tCardsScroller.content = tCardsHBox
+          playLogScroller.content = playLogVBox
+
 
           anchor.children = gameView
           stack.children = anchor
 
           root = stack
 
-          def gameInProgress(): Unit =
-            if gameOption.nonEmpty then
+          def playAction() : Unit = {
+            if gameInProgess then
               val game = gameOption.get
+              val cardUsedForTaking = game.players(game.turn).cards.filter(_.selected)
+              val cardsToBeTaken = game.tableCards.filter(_.selected)
+              var roundNumber = game.returnRoundNumber
+              //println((cardUsedForTaking, cardsToBeTaken)) //
+              val successfulMoveByHuman = game.playTurn(cardUsedForTaking, cardsToBeTaken)
+              if !successfulMoveByHuman then //Invalid move by User
+                new Alert(AlertType.Information, "Invalid move!").showAndWait()
+                cardUsedForTaking.foreach(_.unselect())
+                cardsToBeTaken.foreach(_.unselect())
+                updateAllCards()
+              else if roundNumber != game.returnRoundNumber && !game.returnGameOver then //Round over but game continues
+                new Alert(AlertType.Information, ""){headerText = "New Round!"}.showAndWait()
+                updateAllCards()
+              else if !game.returnGameOver then //Successful move by User, round didn't end, game didn't end
+                while game.turnCheck() do
+                  if roundNumber != game.returnRoundNumber && !game.returnGameOver then
+                    new Alert(AlertType.Information, ""){headerText = "New Round!"}.showAndWait()
+                    updateAllCards()
+                  else if game.returnGameOver then
+                    gameOver(game)
+                updateAllCards()
+              else //Successful move by user, game ended
+                gameOver(game)
+            else
+              val players = Buffer[Player]()
+              val cDialog = new ChoiceDialog[Int](2, Seq(2,3,4,5)) {
+                initOwner(stage)
+                title = ""
+                headerText = "Create a New Game"
+                contentText = "Choose the number of players:"
+              }
+              val cResult = cDialog.showAndWait()
+              cResult match {
+                case None         => println("No selection")
+                case Some(choice) => {
+                  val numOfPlayers = choice
+                  var i = 0
+                  while i < numOfPlayers do {
+                    val tDialog = new TextInputDialog(defaultValue = s"Player ${i}") {
+                      initOwner(stage)
+                      title = ""
+                      headerText = "Create a New Game"
+                      contentText = "Please enter a player's name:"
+                    }
+                    val tResult = tDialog.showAndWait()
+                    tResult match {
+                      case Some(playerName) => {
+                        val ButtonTypeOne = new ButtonType("Human")
+                        val ButtonTypeTwo = new ButtonType("Computer")
+                        val alert = new Alert(AlertType.Confirmation) {
+                          initOwner(stage)
+                          title = ""
+                          headerText = "Create a New Game"
+                          contentText = "Choose whether this player is a human player or a computerized opponent."
+                          buttonTypes = Seq(
+                            ButtonTypeOne, ButtonTypeTwo, ButtonType.Cancel)
+                        }
+                        val result = alert.showAndWait()
+                        result match {
+                          case Some(ButtonTypeOne)   => players += new Human(i, playerName)
+                          case Some(ButtonTypeTwo)   => players += new COM(i, playerName)
+                          case _ => i = numOfPlayers
+                        }
+                      }
+                      case _ => i = numOfPlayers
+                    }
+                    i += 1
+                  }
+                  if i == numOfPlayers then
+                    val game = new Game(players)
+                    gameOption = Some(game)
+                    println("Game Created") //
+                    tCardsHBox.children.clear()
+                    pCardsHBox.children.clear()
+                    game.players.foreach(_.changeGame(game))
+                    stack.children = anchor
+                    gameInProgess = true
+                    //updateAllCards()
+                    game.setupRound()
+                    updateAllCards()
+                    var roundNumber = game.returnRoundNumber
+                    if game.players.forall(
+                      _ match
+                        case COM(playerNumber, playerName, gameOption) => true
+                        case _ => false
+                    ) then
+                      while !game.returnGameOver do
+                        game.turnCheck()
+                        if roundNumber != game.returnRoundNumber && !game.returnGameOver then
+                          new Alert(AlertType.Information, ""){headerText = "New Round!"}.showAndWait()
+                          roundNumber = game.returnRoundNumber
+                        else if game.returnGameOver then
+                          gameOver(game)
+                        updateAllCards()
+                }
+              }
+          }
+
+          def updateAllCards(): Unit = //Called whenever turn is switched and player's cards, table cards, player's name, deck size and opponents cards need to be updated
+            if gameOption.nonEmpty then
+              val game = gameOption.get //playLog here!!!
+              if game.playLog.size != playLogSize then
+                game.playLog.takeRight(game.playLog.size - playLogSize).foreach(playLogVBox.children += getPlayLogCell(_))
+                val lmao = playLogVBox.heightProperty().toInt
+                if playLogSize != 0 then
+                  playLogScroller.vvalueProperty().bind(playLogVBox.heightProperty())
+                playLogSize = game.playLog.size
               updatePlayerCards(game)
               updateTableCards(game)
+              updateOpponentCards(game)
+              if gameInProgess then
+                val name = new Text(s"${game.players(game.turn).playerName}")
+                val deckSize = new Text(s"Cards left in deck: ${game.deck.returnDeckSize}")
+                val deckActualSize = game.deck.returnDeckSize
+                name.setFont(new Font("Comic Sans MS", 16))
+                deckSize.setFont(new Font("Comic Sans MS", 16))
+                deckSizePane.children = deckSize
+                nameTilePane.children = name
 
           def updatePlayerCards(game: Game) =
             pCardsHBox.children.clear()
@@ -356,18 +494,39 @@ object Main extends JFXApp3 {
                 val img = new Image(s"file:cards/${k.toString.toLowerCase.replace(' ', '_')}.png", playerCardWidth, playerCardHeight, true, true)
                 pCardsHBox.children += new ImageView(img)
                 })
-              pCardsHBox.children.foreach(k => k.onMouseClicked = (event: MouseEvent) => replaceSelectedPlayerCard(pCardsHBox.children.indexOf(k), game))
+            pCardsHBox.children.foreach(k => k.onMouseClicked = (event: MouseEvent) => replaceSelectedPlayerCard(pCardsHBox.children.indexOf(k), game))
 
           def updateTableCards(game: Game) =
-            val t = new Text(s"${game.players(game.turn).playerName}")
-            t.setFont(new Font("Comic Sans MS", 16))
-            nameTilePane.children = t
             tCardsHBox.children.clear()
             game.tableCards.foreach(k => tCardsHBox.children += getImageView(k, 165, tableCardHeight * 0.95))
               tCardsHBox.children.foreach(k => k.onMouseClicked = (event: MouseEvent) => replaceSelectedTableCard(tCardsHBox.children.indexOf(k), game))
 
+          def updateOpponentCards(game: Game): Unit =
+            opponentHBox.children.clear()
+            val players = game.players
+            var i = (game.turn + 1) % players.size
+            var vBoxNum = 0
+            var l = 0
+            while i % players.size != game.turn do
+              val vBox = new VBox()
+              val hBox = new HBox(3)
+              hBox.minHeight(opponentCardHeight)
+              hBox.minWidth(opponentCardWidth * 4 + 9)
+              vBox.alignment = Pos.Center
+              hBox.alignment = Pos.BottomCenter
+              players(i % players.size).cards.foreach(k => hBox.children += getFlippedImageView(k, opponentCardHeight, playerCardWidth, true, true))
+              val name = new Text(players(i % players.size).playerName)
+              name.setFont(new Font("Comic Sans MS", 14))
+              //name.setFill(Color.White)
+              //hbox.children += Vector.tabulate(players(i).cards.size)(k => new Image(s"file:cards/FlippedCard.png", 30, playerCardHeight / 5, true, true))
+              vBox.children = List(new Text(players(i % players.size).playerName), hBox)
+              l += 1
+              opponentHBox.children += vBox
+              vBoxNum += 1
+              i += 1
+
+
           def replaceSelectedPlayerCard(index: Int, game: Game): Unit =
-            //if !midSelection then
             val card = game.players(game.turn).cards(index)
             val img  = new Image(s"file:cards/${game.players(game.turn % game.players.size).cards(index).toString.toLowerCase.replace(' ', '_')}.png", 150, playerCardHeight, true, true)
             var writableImg = new WritableImage(img.pixelReader.get, img.width.value.toInt, img.height.value.toInt)
@@ -399,9 +558,85 @@ object Main extends JFXApp3 {
                 replaceSelectedTableCard(index, game)}
             tCardsHBox.children.update(index, newImageView)
 
+          def gameOver(game: Game): Unit =
+            stack.children += scoreboard(game)
+            gameInProgess = false
+            tCardsHBox.children.clear()
+            pCardsHBox.children.clear()
+            val mostPoints = game.scores.filter(_._2 == game.scores.maxBy(_._2)._2)
+            var nameString = ""
+            mostPoints.size match
+              case 1 => nameString = s"${mostPoints.head._1.playerName} wins the game with ${mostPoints.head._2} points!"
+              case 2 => nameString = s"${mostPoints.map(_._1.playerName).head} and ${mostPoints.map(_._1.playerName).last} tie the game with most (${mostPoints.head._2}) points!"
+              case _ => val firstNames = mostPoints.map(_._1.playerName)
+                        val lastName = firstNames.remove(firstNames.size - 1)
+                        firstNames += "and"
+                        nameString = s"${firstNames.mkString(", ")} ${lastName} tie the game with most (${mostPoints.head._2}) points!"
+            val name = new Text(nameString)
+            name.setFont(new Font("Comic Sans MS", 16))
+            deckSizePane.children.clear()
+            nameTilePane.children = name
+            new Alert(AlertType.Information, nameString){headerText = "Game Over!"}.showAndWait()
+
+          def scoreboard(game: Game): TableView[Player] =
+            val data = ObservableBuffer[Player]()
+            game.players.foreach(data += _)
+            val table = new TableView[Player](data)
+            table.maxWidth = 5 * tableCardWidth
+            table.maxHeight = 24 + 25 * gameOption.get.players.size
+            val col1 = new TableColumn[Player, Int]("Player #")
+            col1.cellValueFactory = cdf => ObjectProperty(cdf.value.playerNumber)
+            val col2 = new TableColumn[Player, String]("Name")
+            col2.cellValueFactory = cdf => StringProperty(cdf.value.playerName)
+            val col3 = new TableColumn[Player, Int]("Score")
+            col3.cellValueFactory = cdf => ObjectProperty(gameOption.get.scores.find(_._1 == cdf.value).get._2)
+            val col4 = new TableColumn[Player, Int]("Cards Collected")
+            col4.cellValueFactory = cdf => ObjectProperty(cdf.value.returnPileSize)
+            val col5 = new TableColumn[Player, Int]("Spades Collected")
+            col5.cellValueFactory = cdf => ObjectProperty(cdf.value.returnSpadesSize)
+            val col6 = new TableColumn[Player, Int]("Sweeps")
+            col6.cellValueFactory = cdf => ObjectProperty(cdf.value.returnSweeps)
+            val col7 = new TableColumn[Player, Int]("Aces")
+            col7.cellValueFactory = cdf => ObjectProperty(cdf.value.returnAcesSize)
+            table.columns ++= ObservableBuffer(col1, col2, col3, col4, col5, col6, col7)
+            table.setColumnResizePolicy(TableView.ConstrainedResizePolicy)
+            table.sortOrder.add(col1)
+            table
 
           def getImageView(card: Card, width: Double, height: Double, preserveRatio: Boolean = true, smooth: Boolean = true): ImageView =
             new ImageView(new Image(s"file:cards/${card.toString.toLowerCase.replace(' ', '_')}.png", width, height, preserveRatio, smooth))
+
+          def getFlippedImageView(card: Card, width: Double, height: Double, preserveRatio: Boolean = true, smooth: Boolean = true): ImageView =
+            new ImageView(new Image(s"file:cards/FlippedCard.png", width, height, preserveRatio, smooth))
+
+          def getPlayLogCell(move: (Player, Card, Buffer[Card])): VBox =
+            val vBox = new VBox()
+            val hBox = new HBox(15)
+            val hBoxPlay = new HBox(15)
+            val hBoxTake = new HBox(15)
+            vBox.alignment = Pos.CenterLeft
+            hBox.alignment = Pos.Center
+            hBoxPlay.alignment = Pos.CenterLeft
+            hBoxTake.alignment = Pos.CenterLeft
+            hBoxPlay.minWidth = playLogScrollerWidth / 4
+            hBoxTake.minWidth = playLogScrollerWidth / 4 * 3
+            val name = new Text(move._1.playerName)
+            name.setFont(new Font("Comic Sans MS", 16))
+            val played = new Text("Played:")
+            played.setFont(new Font("Comic Sans MS", 12))
+            val took = new Text("Took:")
+            took.setFont(new Font("Comic Sans MS", 12))
+            val cardPlayed = getImageView(move._2, playLogCardWidth, playLogCardHeight)
+            vBox.children = List(name, hBox)
+            hBox.children = List(hBoxPlay, hBoxTake)
+            hBoxPlay.children = List(played, cardPlayed)
+            hBoxTake.children = Buffer(took)
+            move._3.foreach(hBoxTake.children += getImageView(_, playLogCardWidth, playLogCardHeight))
+            vBox.setBackground(Background.fill(Color.color(0.208, 0.47, 0.275)))
+            hBoxPlay.setBackground(Background.fill(Color.color(0.208, 0.47, 0.275)))
+            vBox
+
+
         }
     }
 }

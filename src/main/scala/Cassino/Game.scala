@@ -8,40 +8,16 @@ import scala.collection.mutable.Buffer
 
 class Game(var players: Buffer[Player], var deck: Deck = new Deck){
 
-  val vNumber:      String                       = "0001"
-  val scores:       Buffer[(Player, Int)]        = players.zip(Buffer.fill(players.size)(0))
-  val tableCards:   Buffer[Card]                 = Buffer()
-  var dealer:       Int                          = 0
-  var turn:         Int                          = (dealer + 1) % players.size // Round starts from the player next to the dealer
-  var lastToTake:   Int                          = -1                          // Player nummber of the last players who took cards from the table
-  var roundNumber:  Int                          = 0
-  var gameOver:     Boolean                      = false
+val vNumber:      String                         = "0001"
+val scores:       Buffer[(Player, Int)]          = players.zip(Buffer.fill(players.size)(0))
+val tableCards:   Buffer[Card]                   = Buffer()
+var dealer:       Int                            = 0
+var turn:         Int                            = (dealer + 1) % players.size // Round starts from the player next to the dealer
+var lastToTake:   Int                            = -1                          // Player nummber of the last players who took cards from the table
+var roundNumber:  Int                            = 0
+var gameOver:     Boolean                        = false
+var playLog: Buffer[(Player, Card, Buffer[Card])] = Buffer[(Player, Card, Buffer[Card])]()
   //val movesByCOM:   Buffer[(Card, Buffer[Card])] = Buffer()                    //Moves made by COM opponents since last Human player's moves, maybe add COM as an element too?
-
-  /*def playGame(): Unit =
-    while !gameOver do
-      //this.playRound
-      this.updateScores()
-      dealer += 1
-      turn = (dealer + 1) % players.size
-      gameOver = !scores.forall(_._2 < 16)
-      //endCondition = true//TEMP
-    println(s"Game has ended with ${scores.maxBy(_._2)._1} as the Winner!")*/
-
-  /*def playRound: Unit =
-    var endConditionRound = false
-    players.foreach(_.clearHand)                                                                                        // Make sure no players have cards before they have been dealt
-    this.dealCards
-    while !endConditionRound do
-      this.playTurn
-      endConditionRound = players.forall(_.cards.isEmpty)
-      //endConditionRound = true//TEMP
-    // NOTE: Not sure if in case of ties, extra points should be awarded to multiple players? Currently they are
-    val mostCards  = players.filter(k => k.returnPileSize == players.maxBy(l => l.returnPileSize).returnPileSize)       // Players with largest piles
-    val mostSpades = players.filter(k => k.returnSpadesSize == players.maxBy(l => l.returnSpadesSize).returnSpadesSize) // Players with most Spades
-    mostCards.foreach(_.addPoints(1))                                                                                   // Add points for most cards
-    mostSpades.foreach(_.addPoints(2))                                                                                  // Add points for most Spades
-  */
 
   def setupRound(): Unit =
     this.deck = new Deck()
@@ -51,14 +27,16 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
       k.clearPile()
       k.clearSweeps())
     this.dealCards()
-    turnCheck()
     roundNumber += 1
+    while !gameOver && !players.forall(_.cards.isEmpty) && (players(turn) match
+    case COM(playerNumber, playerName, gameOption) => true
+    case _ => false)
+    do
+      turnCheck()
 
   def endRound(): Unit =                                                                                             //Return value states if game is over
     val multipleScoreReceiversAllowed = false                                                                           //Can be decided later whether everyone with most cards/spades gets the points.
     tableCards.foreach(players.find(_.playerNumber == lastToTake).get.addCardToPile(_))
-    //val mostCards  = players.filter(k => k.returnPileSize == players.maxBy(l => l.returnPileSize).returnPileSize)       // Players with largest piles
-    //val mostSpades = players.filter(k => k.returnSpadesSize == players.maxBy(l => l.returnSpadesSize).returnSpadesSize) // Players with most Spades
     val mostCards = players.groupBy(_.returnPileSize)(players.groupBy(_.returnPileSize).keys.max)
     val mostSpades = players.groupBy(_.returnSpadesSize)(players.groupBy(_.returnSpadesSize).keys.max)
     if multipleScoreReceiversAllowed then
@@ -67,39 +45,18 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
     else
       if mostCards.size == 1 then mostCards.head.addPoints(1)
       if mostSpades.size == 1 then mostSpades.head.addPoints(2)
-    //this.deck.clear()
     this.updateScores()
     gameOver = scores.exists(_._2 >= 16)
     dealer = (dealer + 1) % players.size
     turn = (dealer + 1) % players.size
     lastToTake = -1
-    //if gameOver then
-    //  return true
-    //false
-
-  /*def playTurn: (Buffer[(Card, Buffer[Card])], Buffer[Card]) = //Separate into two or more methods where one part is dedicated to handling input (moves)
-    var whosTurn = players(turn % players.size)                                                                         // Which player's turn it is (indexes so starts from 0)
-    val take = Buffer[(Card, Buffer[Card])]((new Card(52), Buffer(new Card(52))))                                       // Temporary until implementation for input exists
-    val place = Buffer[Card](new Card(52))                                                                              // Temporary until implementation for input exists
-    var moveIsValid: Boolean = false
-    if take.nonEmpty then                                                                                               // Taking cards from the table this turn
-      while !moveIsValid do
-        moveIsValid = true                                                                                              // Temporary until implementation for input exists
-    else if place.nonEmpty then                                                                                         // Placing cards on the table this turn
-      while !moveIsValid do
-        moveIsValid = true                                                                                              // Temporary until implementation for input exists
-    else
-      // No move made
-    if whosTurn.cards.size < 4 then                                                                                     // Draws a card into the player's hand if it has less than 4 cards and deck is not empty
-      deck.draw match
-        case Some(card) => whosTurn.addCardToPlayer(card)
-        case _          =>
-    turn += 1
-    (Buffer((new Card(52), Buffer(new Card(52), new Card(52)))), Buffer(new Card(52)))  */
+    if gameOver then
+      tableCards.clear()
 
   def playTurn(usedForTaking: Buffer[Card], toBeTaken: Buffer[Card]) : Boolean =
+    //println((players(turn), usedForTaking, toBeTaken))
     var whosTurn = players(turn % players.size)
-    if usedForTaking.nonEmpty then //&& usedForTaking.forall(usedForTaking.head == _) then
+    if usedForTaking.nonEmpty then
       if toBeTaken.nonEmpty then
         if checkMoveLegitimacyTake(usedForTaking, toBeTaken) then
           whosTurn.addCardToPile(usedForTaking.head)
@@ -122,14 +79,16 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
         usedForTaking.head.unselect()
         whosTurn.addCardToPlayer(deck.draw)
         turn = (turn + 1) % players.size
+      else if usedForTaking.head.cardID == 52 then
+        throw InvalidCardException(s"Card used for taking has invalid cardID: ${usedForTaking.head.cardID}") //Only created in COM.placing()
       if players.forall(_.cards.isEmpty) then
+        playLog += ((whosTurn, usedForTaking.head, toBeTaken))
         endRound()
         if !gameOver then
           setupRound()
-        //turnCheck()
         return true
       else
-        //turnCheck()
+        playLog += ((whosTurn, usedForTaking.head, toBeTaken))
         return true
     false
 
@@ -142,31 +101,7 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
         println(s"game.turnCheck called for ${players(turn)}")
         false
 
-  /*var whosTurn = players(turn % players.size)
-    if move.collect(_._2).flatten.isEmpty && move.collect(_._1).nonEmpty && checkPlayerHasCard(move.collect(_._1)) then
-      tableCards += move.head._1
-      whosTurn.cards -= move.head._1
-      move.head._1.selectToggle
-      whosTurn.addCardToPlayer(deck.draw)
-      turn = (turn + 1) % players.size
-      return true
-    else if checkMoveLegitimacyTake(move) && move.collect(_._1).nonEmpty then
-      move.collect(_._2).flatten.foreach(k => {
-        k.selectToggle
-        whosTurn.addCardToPile(k)
-        tableCards -= k
-      })
-      //what else happens when cards are taken?
-      turn = (turn + 1) % players.size
-      return true
-    move.head._1.selectToggle
-    move.collect(_._2).flatten.foreach(_.selectToggle)
-    return false*/
-
-
-//move: Buffer[(Card, Buffer[Card])]
   def checkMoveLegitimacyTake(usedForTaking: Buffer[Card], toBeTaken: Buffer[Card]): Boolean =
-    //For each taking move the player has to determine which card is used to pick which cards
     val noDuplicates  = toBeTaken.map(_.cardID) == toBeTaken.map(_.cardID).distinct                                                               // There are no duplicates in the cards we are trying to take (same card cannot be taken multiple times)
     val playerHasCard = checkPlayerHasCard(usedForTaking)                                                             // Player has every(/the) card in their hand they are trying to use
     val tableHasCard  = toBeTaken.forall(k => tableCards.exists(_.cardID == k.cardID))                                // Cards we are trying to take are on the Table
@@ -175,27 +110,33 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
       return false
     SumCheck(usedForTaking.head, toBeTaken)
 
-
   def SumCheck(usedForTaking: Card, toBeTaken: Buffer[Card]): Boolean =
     val handValue = usedForTaking.handValue
     val tableValues = toBeTaken.map(_.tableValue)
     if !(tableValues.sum % handValue == 0) then
       return false
     val numOfPartitions = tableValues.sum / handValue
-    recursive(0, tableValues, Buffer.fill(numOfPartitions)(0))
+    partitionCheck(tableValues, numOfPartitions)
 
-  def recursive(index: Int, tableValues: Buffer[Int], temp: Buffer[Int]): Boolean =
-    if (index == tableValues.size) then
-      return checkOutOfBounds(temp)
-    var bool = false
-    var ret = false
-    for i <- Range(0,temp.size) do
-      temp.update(i, temp(i) + tableValues(index))
-      bool = recursive(index + 1, tableValues, temp)
-      if bool then
-        ret = true
-      temp.update(i, temp(i) - tableValues(index))
-    ret
+  def partitionCheck(tableValues: Buffer[Int], numOfPartitions: Int): Boolean =
+    val sum = tableValues.sum
+    if numOfPartitions == 0 || sum % numOfPartitions != 0 then  // If the sum is not divisible by x, then it's not possible to partition the array into x sub-buffers with equal sums
+      return false
+    val targetSum = sum / numOfPartitions
+    val bufferSum = Array.fill(numOfPartitions)(0)
+    def recursive(i: Int): Boolean = // Use a recursive helper function to partition the array into sub-buffers
+      var ret = false
+      if i == tableValues.length then// If we've reached the end of the array, check if each sub-buffer has a sum equal to the target sum
+        return bufferSum.forall(_ == targetSum)
+      for j <- 0 until numOfPartitions do
+        if (targetSum >= bufferSum(j) + tableValues(i)) then
+          bufferSum(j) += tableValues(i)// If adding the current element to the jth sub-buffer won't cause the sum to exceed the target sum, add the element to the sub-buffer
+          if recursive(i + 1) then // Recursively try to add the next element to the sub-buffers
+            ret = true
+          bufferSum(j) -= tableValues(i)  // If the recursive call didn't succeed, remove the element from the sub-buffer and try adding it to the next sub-buffer
+      ret                      // If we couldn't add the current element to any sub-buffer, return false
+    recursive(0) // Call the helper function with the first element of the array
+
 
   def checkOutOfBounds(v: Buffer[Int]): Boolean = v.tail.forall(_ == v.head)
 
@@ -223,8 +164,6 @@ class Game(var players: Buffer[Player], var deck: Deck = new Deck){
       val index = player.playerNumber
       scores(index) = (player , scores(index)._2 + player.returnRoundScore)
       println(scores(index))
-    //scores.foreach(k => scores.update(scores.indexOf(k), (k._1, k._2 + k._1.returnRoundScore)))
-
 
   def returnTopScore: (Player, Int) = scores.maxBy(_._2)
 

@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/CassinoRaySBT.iml" filepath="$PROJECT_DIR$/.idea/modules/CassinoRaySBT.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/CassinoRaySBT-build.iml" filepath="$PROJECT_DIR$/.idea/modules/CassinoRaySBT-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/project.CassinoRaySBT-build.iml" filepath="$PROJECT_DIR$/.idea/modules/project.CassinoRaySBT-build.iml" />
     </modules>
   </component>
 </project>

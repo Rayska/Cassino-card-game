@@ -8,7 +8,6 @@ import scala.io.Source
 import scala.collection.mutable.Buffer
 
 val ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-//import scala.util.matching.Regex val ALPHABET = "[A-Z]".r in Regex
 
 object ReaderWriter {
 
@@ -37,7 +36,6 @@ object ReaderWriter {
     val gameOver: String = if game.gameOver then "T" else "F"
     val GME = Buffer[String]("GME", /*"",*/ s"D${game.dealer}" ,s"T${game.turn}", s"L${lastToTake}", s"R${roundNumber}", s"G${gameOver}")   //Create GME block
     game.tableCards.foreach(GME += cardFormattingCreate(_))                                                 //Table Cards
-    //GME.update(1, GME.tail.mkString("").length.toString)
     GME.mkString("") + "\n"
 
   private def createPlRBlock(player: Player): String =
@@ -52,7 +50,6 @@ object ReaderWriter {
     player match
       case Human(number, name) => PLR += "U"
       case COM(number, name, game)  => PLR += "C"
-    //PLR.update(1, PLR.tail.mkString("").length.toString)
     PLR.mkString("") + "\n"
 
   private def createDCKBlock: String =
@@ -126,7 +123,6 @@ object ReaderWriter {
       case e:IndexOutOfBoundsException => throw CorruptedCassinoFileException("Player index out of bounds")
 
   private def readGMEBlock(block: String): (Int, Int, Int, Int, Boolean, Buffer[Card]) =
-    //val blocksize = block.slice(3,5)
     val dealer = block(4).toInt - 48
     val turn = block(6).toInt - 48
     val lastToTake =  scoreFormattingRead(block(8))
@@ -140,7 +136,6 @@ object ReaderWriter {
     (dealer, turn, lastToTake, roundNumber, gameOver, cards)
 
   private def readPLRBlock(block: String): (Player, Int) =
-    //val blocksize = block.slice(3,5)
     val playerNumber = block(3).toInt - 48 //Char to Int conversion is not '1' to 1
     val playerScore = scoreFormattingRead(block(4))
     val playerSweeps = scoreFormattingRead(block(5))
