@@ -12,8 +12,7 @@ case class Human(val playerNumber: Int, val playerName: String) extends Player {
   val pile:                Buffer[Card] = Buffer()
   var sweeps:              Int          = 0
 
-  def returnRoundScore: Int =
-    /// Round score calculated here from this.cards
+  def returnRoundScore: Int = // Round score calculated here from this.cards
     var roundScore = additionalPoints + sweeps
     additionalPoints = 0
     pile.foreach(k =>                             //For aces and 2 of Spades you get 1 point, for 10 of Diamonds you get 2 points
@@ -49,9 +48,13 @@ case class Human(val playerNumber: Int, val playerName: String) extends Player {
 
   def changeGame(newgame: Game): Unit = gameOption = Some(newgame)
 
-  def returnGame: Game = new Game(Buffer[Player](new Human(-1, "Place Holder")))
+  def returnGame: Game = gameOption.get
   
-  def makePlay(): Unit = println("makePlay called for Human!!!")
+  def makePlay(): Unit = {}
+
+  def returnCards: Buffer[Card] = cards
+
+  def returnPile: Buffer[Card] = pile
 
   override def toString: String =
     playerName + ", Human" + ", Player Number: " + playerNumber

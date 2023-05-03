@@ -31,11 +31,11 @@ object ReaderWriter {
 
   private def createGMEBlock: String =
     val game = gameOption.get
-    val lastToTake = if game.lastToTake == -1 then "-" else scoreFormattingCreate(game.lastToTake)
+    val lastToTake = if game.returnLastToTake == -1 then "-" else scoreFormattingCreate(game.returnLastToTake)
     val roundNumber: String = scoreFormattingCreate(game.returnRoundNumber)
-    val gameOver: String = if game.gameOver then "T" else "F"
-    val GME = Buffer[String]("GME", /*"",*/ s"D${game.dealer}" ,s"T${game.turn}", s"L${lastToTake}", s"R${roundNumber}", s"G${gameOver}")   //Create GME block
-    game.tableCards.foreach(GME += cardFormattingCreate(_))                                                 //Table Cards
+    val gameOver: String = if game.returnGameOver then "T" else "F"
+    val GME = Buffer[String]("GME", s"D${game.returnDealer}" ,s"T${game.returnTurn}", s"L${lastToTake}", s"R${roundNumber}", s"G${gameOver}")   //Create GME block
+    game.returnTableCards.foreach(GME += cardFormattingCreate(_))                                                 //Table Cards
     GME.mkString("") + "\n"
 
   private def createPlRBlock(player: Player): String =
@@ -54,7 +54,7 @@ object ReaderWriter {
 
   private def createDCKBlock: String =
     val game = gameOption.get
-    val DCK = Buffer[String]("DCK"/*, (game.deck.deck.size * 2).toString*/)
+    val DCK = Buffer[String]("DCK")
     game.deck.deck.foreach(DCK += cardFormattingCreate(_))
     DCK.mkString("") + "\n"
 
@@ -64,7 +64,7 @@ object ReaderWriter {
     else
       ALPHABET(score.toString.last.toInt - 48).toString
 
-  private def cardFormattingCreate(card: Card): String =
+  private def cardFormattingCreate(card: Card): String = //Creates a two character combination that is unique for each card
     var ret = ""
     card.suit match
       case 0  => ret += "C"
@@ -167,7 +167,7 @@ object ReaderWriter {
     cardsAsString.foreach(cards += cardFormattingRead(_))
     new Deck(cards)
 
-  private def scoreFormattingRead(score: Char): Int =
+  private def scoreFormattingRead(score: Char): Int = //Turns ALPHABETS back into integers
     if score == '-' then
       -1
     else if ALPHABET.contains(score) then
@@ -175,7 +175,7 @@ object ReaderWriter {
     else
       score.toInt - 48
 
-  private def cardFormattingRead(cardString: String): Card =
+  private def cardFormattingRead(cardString: String): Card = //Creates a card based on a two character String
     if cardString.length == 2 then
       def valueFinder(char: Char): Int =
         if ALPHABET.contains(char) then

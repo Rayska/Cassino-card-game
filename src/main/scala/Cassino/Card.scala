@@ -5,7 +5,7 @@ import scala.collection.mutable.Buffer
 class Card(val cardID: Int) {
 
   val suit: Int = cardID / 13       // 0 for Clubs, 1 for Diamonds, 2 for Hearts and 3 for Spades
-  var selected: Boolean = false
+  private var selected: Boolean = false
 
   val handValue: Int =
     if (cardID + 1) % 13 == 0 then  // Aces
@@ -26,6 +26,8 @@ class Card(val cardID: Int) {
   def select(): Unit = selected = true
   
   def unselect(): Unit = selected = false
+  
+  def returnSelected(): Boolean = selected
 
   override def toString: String =
     var ret = Buffer[String]()

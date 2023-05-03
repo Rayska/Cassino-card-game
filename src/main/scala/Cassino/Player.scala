@@ -42,4 +42,8 @@ abstract class Player {
   def changeGame(game: Game): Unit
 
   def returnGame: Game
+  
+  def returnCards: Buffer[Card]
+  
+  def returnPile: Buffer[Card]
 }

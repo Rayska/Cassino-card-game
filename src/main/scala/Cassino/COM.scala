@@ -13,22 +13,22 @@ case class COM(val playerNumber: Int, val playerName: String, var gameOption: Op
 
   implicit val placingOrdering: Ordering[Card] = Ordering.by(k => (k.handValue, k.suit))  // Sorting first by handValue and then by suit. This way 2 of Spades will be the last of the 2s to be placed
 
-  private val takeTreshold = 3
+  private val takeTresholdSweep = 2
+  private val abosluteTakeTreshold = 4
   private val smallestAcceptableSweep = 7
-
 
   def makePlay(): Unit =  //Here the COM will decide what to play
     var usedForTaking: Option[Card] = None
     var toBeTaken = Buffer[Card]()
     if gameOption.nonEmpty then
       val game = gameOption.get
-      if game.tableCards.nonEmpty then
+      if game.returnTableCards.nonEmpty then
         val allPossibleTakes = findAllTakes(game)
         if allPossibleTakes.forall(k => k._2.isEmpty) then //Have to place something since can't take anything
           game.playTurn(placing(), Buffer[Card]())
         else
           val scored: Buffer[(Card, Buffer[(Buffer[Card], Int)])] = findAllTakes(game).map(k => (k._1, k._2.zip(k._2.map(scoreCardBuffer(_) + scoreCardBuffer(Buffer(k._1)))))).sortBy(_._1)  // Gives each possible taking move a score based on how good of a move it is, ADD SWEEPS
-          val tableCardsSorted = game.tableCards.sorted.toVector
+          val tableCardsSorted = game.returnTableCards.sorted.toVector
           var potentialPlays: Buffer[(Card, Buffer[(Buffer[Card], Int)])] = cards.sorted.map(k => (k, Buffer[(Buffer[Card], Int)]()))
           for index <- cards.indices do
             scored.update(index, (scored(index)._1, scored(index)._2.sortBy(_._2))) //sort takes by their respective points Int
@@ -49,10 +49,17 @@ case class COM(val playerNumber: Int, val playerName: String, var gameOption: Op
             for index <- cards.indices do
               for buff <- scored(index)._2.indices do
                 firstSatisfactories += ((scored(index)._1, scored(index)._2(buff)._1, scored(index)._2(buff)._2)) //change format into (Card, Buffer[Card], Int)
-            val playOption = firstSatisfactories.sortBy(_._3).findLast(k => k._3 >= takeTreshold && helper(tableCardsSorted, k._2, smallestAcceptableSweep) >= smallestAcceptableSweep) //IF after play, smallest sweep is 8 and points for the take atleast 3 then good
-            if playOption.nonEmpty then
-              val play = playOption.get
-              game.playTurn(Buffer(play._1), play._2)
+            val sortedPlays = firstSatisfactories.sortBy(_._3).reverse
+            val highestTake = sortedPlays.headOption
+            val playOption = sortedPlays.find(k => k._3 >= takeTresholdSweep && helper(tableCardsSorted, k._2, smallestAcceptableSweep) >= smallestAcceptableSweep) //IF after play, smallest sweep is 8 and points for the take atleast 3 then good
+            if highestTake.nonEmpty || playOption.nonEmpty then
+              if highestTake.nonEmpty && highestTake.get._3 >= abosluteTakeTreshold then
+                game.playTurn(Buffer(highestTake.get._1), highestTake.get._2)
+              else if playOption.nonEmpty then
+                val play = playOption.get
+                game.playTurn(Buffer(play._1), play._2)
+              else
+                game.playTurn(placing(), Buffer[Card]())
             else
               game.playTurn(placing(), Buffer[Card]())
       else
@@ -74,7 +81,7 @@ case class COM(val playerNumber: Int, val playerName: String, var gameOption: Op
     var placings = cards.filterNot(k => k.handValue > 13 || k.suit == 3).sortBy(_.handValue).reverse
     var valuables = cards.filter(k => k.handValue > 13 || k.suit == 3).sorted
     if placings.nonEmpty then
-      val tableCards = gameOption.get.tableCards
+      val tableCards = gameOption.get.returnTableCards
       if tableCards.map(_.tableValue).sum % 14 > 10 then
         val sweepBreaker: Option[Card] = placings.find(k => (tableCards.map(_.tableValue).sum + k.tableValue) % 14 < 10)
         if sweepBreaker.nonEmpty then
@@ -83,7 +90,6 @@ case class COM(val playerNumber: Int, val playerName: String, var gameOption: Op
     else if valuables.nonEmpty then
       Buffer(valuables.min)
     else
-      println("No cards to place!")
       Buffer[Card](new Card(52))
 
   def scoreCardBuffer(cards: Buffer[Card]): Int = //4 for d10, 3 for s2 and aces, 1 for spades. And for being a card, 1
@@ -102,7 +108,7 @@ case class COM(val playerNumber: Int, val playerName: String, var gameOption: Op
     val allTakes: Buffer[(Card, Buffer[Buffer[Card]])] = this.cards.zip(Buffer.tabulate(cards.size)(k => Buffer(Buffer[Card]()).empty))
     for i <- allTakes do
       val takes = Buffer[Buffer[Card]]()
-      allTakes(allTakes.indexOf(i))._2 ++= canBeTaken(game.tableCards, i._1.handValue, Buffer[Card](), i._1.handValue)
+      allTakes(allTakes.indexOf(i))._2 ++= canBeTaken(game.returnTableCards, i._1.handValue, Buffer[Card](), i._1.handValue)
       def canBeTaken(tableCards: Buffer[Card], handValue: Int, collector: Buffer[Card], incHandValue: Int): Buffer[Buffer[Card]] = //Given a handValue returns which sets of tableCards can be taken tableCards and handValue stay the same over iterations, collector and incHandValue change
         if tableCards.nonEmpty && incHandValue != 0 then
           for card <- tableCards do
@@ -126,7 +132,7 @@ case class COM(val playerNumber: Int, val playerName: String, var gameOption: Op
 
   def clearSweeps(): Unit = sweeps = 0
 
-  def addCardToPile(card: Card)   = pile += card
+  def addCardToPile(card: Card) = pile += card
 
   def addCardToPlayer(cardOption: Option[Card]) = if cardOption.nonEmpty then cards += cardOption.get
 
@@ -148,13 +154,13 @@ case class COM(val playerNumber: Int, val playerName: String, var gameOption: Op
 
   def returnGame: Game = gameOption.get
 
+  def returnCards: Buffer[Card] = cards
+
+  def returnPile: Buffer[Card] = pile
+
   override def toString: String =
     playerName + ", COM" + ", Player Number: " + playerNumber
 
 }
-
-
-import scala.collection.mutable.Buffer
-
 
 

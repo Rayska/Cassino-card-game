@@ -5,7 +5,7 @@ import scala.util.Random
 
 import scala.collection.mutable.Set
 
-class Deck(var deck: Buffer[Card] = Random.shuffle(Buffer.tabulate(52)(k => new Card(k)))) {
+class Deck(val deck: Buffer[Card] = Random.shuffle(Buffer.tabulate(52)(k => new Card(k)))) {
 
  def draw: Option[Card] =
   if deck.nonEmpty then
