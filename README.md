@@ -1,7 +1,7 @@
 # Cassino by Ray
 
 ## Introduction
-This project was made as part of Aalto University's course CS-C2120 Ohjelmointistudio 2: projekti, "Programming studio 2: Project". In this project I have created a Cassino card game with a Graphical UI using Scala 3 and ScalaFX. The game has features to save and load previous saves to continue a previous session. The game can have up to 6 players which can be individually selected to be either controlled by the user/users or the computer. This project was carried out with the demanding requirements in mind set by the course.
+This project was made as part of Aalto University's course CS-C2120 Ohjelmointistudio 2: projekti, "Programming studio 2: Project", Spring of 2023. In this project I have created a Cassino card game with a Graphical UI using Scala 3 and ScalaFX. The game has features to save and load previous saves to continue a previous session. The game can have up to 6 players which can be individually selected to be either controlled by the user/users or the computer. This project was carried out with the demanding requirements in mind set by the course.
 
 ## User's Manual
 Game is launched by running .src/main/scala/Cassino/GUI/Main.scala. The user can then create or load a previous game from the top left corner menu “Game File”. A new game can also be created by pressing the “PLAY” button. When creating a new game, the user has to specify how many players will be taking part in this game and whether they are controlled by the user or a computer algorithm. Each player can be given a unique name, or the default “Player X”. 
