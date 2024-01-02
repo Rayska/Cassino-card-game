@@ -6,15 +6,11 @@ This project was made as part of Aalto University's course CS-C2120 Ohjelmointis
 ## User's Manual
 Game is launched by running .src/main/scala/Cassino/GUI/Main.scala. The user can then create or load a previous game from the top left corner menu “Game File”. A new game can also be created by pressing the “PLAY” button. When creating a new game, the user has to specify how many players will be taking part in this game and whether they are controlled by the user or a computer algorithm. Each player can be given a unique name, or the default “Player X”.
 
-<p align="center">
-  <img src="https://media.giphy.com/media/OTTNT23LfagGMcWYaJ/giphy.gif">
-</p>
+![](gifs/GameCreation.gif)
 
 During the game the user will be able to see the cards on the table (center of screen), their own cards (bottom of screen), back of opponent cards (top of screen), number of cards remaining in the deck (between opponents’ cards and cards on the table), and the playlog (bottom right corner). Additionally the scoreboard can be viewed on a user’s turn by pressing and holding the “G” key on the keyboard. Cards can be selected by either clicking them or by pressing their corresponding keys. A selected card will be displayed as a transparent version of itself. Player’s own cards can be selected using keys A, S, D, and F. Only one card from the player’s hand can be selected so you have to unselect the previous card before you will be able to select another card. Cards on the table can be selected using keys 0 - 9. Due to most keyboard layouts, 1 selects the leftmost card and 0 the rightmost card. Here cards can be selected freely, but a notification will let the user know if their play was against the game rules. X and Enter can be used to play the selected cards. Clicking the PLAY button serves the same purpose.
 
-<p align="center">
-  <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMzUybXo3bDU0OGhva2xmcDVxanBlbm95YzJxNndqZW1kMDkwOHcxeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Mdtq7dpVRV7ogYMi8h/giphy.gif">
-</p>
+![](gifs/Gameplay.gif)
 
 Computer opponents’ moves will be displayed in the bottom right corner playlog as no animations have been made for making plays. Depending on the situation of the game it might take a second for the algorithm to come up with a play.
 
